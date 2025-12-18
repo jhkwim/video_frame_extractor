@@ -1,6 +1,6 @@
 {
-    "name": "video_frame_extractor",
-    "short_name": "video_frame_extractor",
+    "name": "씬스틸러",
+    "short_name": "씬스틸러",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
