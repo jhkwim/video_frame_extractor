@@ -74,6 +74,7 @@ dev_dependencies:
   json_serializable: ^6.11.2
   flutter_launcher_icons: ^0.14.4
   mocktail: ^1.0.4
+  flutter_native_splash: ^2.4.7
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -89,6 +90,14 @@ flutter_launcher_icons:
   image_path: "assets/icon/icon.png"
   min_sdk_android: 21
   remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#000000"
+  # image: "assets/icon/icon.png" # Removed to avoid crude square look
+  android_12:
+    color: "#000000"
+    # image: "assets/icon/icon.png"
+  web: false
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
