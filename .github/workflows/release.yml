@@ -20,6 +20,11 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+      - name: Update Version
+        run: |
+          sed -i 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          cat pubspec.yaml | grep "version:"
+
       - run: flutter pub get
       - run: flutter test
       
@@ -58,6 +63,11 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+      - name: Update Version
+        run: |
+          sed -i 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          cat pubspec.yaml | grep "version:"
+
       - run: flutter pub get
       
       - name: Build APK
@@ -83,6 +93,11 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+      - name: Update Version
+        run: |
+          sed -i '' 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          cat pubspec.yaml | grep "version:"
+
       - run: flutter pub get
       
       - name: Enable Desktop
