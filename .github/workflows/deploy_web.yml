@@ -1,0 +1,43 @@
+name: Deploy Web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - release
+
+# Permissions required for gh-pages deployment
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Build Web
+        # Dynamically set base-href using the repository name for Project Pages
+        # If using a custom domain, this might need to be changed to "/"
+        run: |
+          REPO_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
+          flutter build web --release --base-href "/$REPO_NAME/"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
