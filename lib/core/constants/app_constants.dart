@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'Frame Master';
+  static const String appName = '씬스틸러';
   static const String extractButtonLabel = '프레임 추출';
   static const String pickVideoButtonLabel = '동영상 선택';
   static const String saveButtonLabel = '저장';
