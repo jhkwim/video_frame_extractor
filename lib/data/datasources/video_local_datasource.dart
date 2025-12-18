@@ -35,7 +35,17 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     );
     
     if (fileName != null) {
-      return File(fileName);
+      final originalFile = File(videoPath);
+      final String originalName = originalFile.uri.pathSegments.last;
+      final String nameWithoutExt = originalName.lastIndexOf('.') != -1 
+          ? originalName.substring(0, originalName.lastIndexOf('.')) 
+          : originalName;
+      
+      final String newName = '${nameWithoutExt}_${positionMs.toInt()}ms.png';
+      final String newPath = '${File(fileName).parent.path}/$newName';
+      
+      final renamedFile = await File(fileName).rename(newPath);
+      return renamedFile;
     }
     return null;
   }
