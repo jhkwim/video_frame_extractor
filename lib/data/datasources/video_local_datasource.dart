@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_thumbnail/video_thumbnail.dart' as vt;
 import 'package:gal/gal.dart';
+import 'package:native_exif/native_exif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'package:flutter/foundation.dart';
@@ -10,11 +11,13 @@ import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:file_selector/file_selector.dart';
 import '../../domain/entities/video_media.dart';
+import '../../domain/entities/video_metadata.dart';
 import '../../core/utils/filename_helper.dart';
 
 abstract class VideoLocalDataSource {
   Future<XFile?> pickVideoFromGallery();
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName);
+  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName, VideoMetadata? metadata);
+  Future<VideoMetadata> getMetadata(XFile videoFile);
   Future<bool?> saveImage(XFile imageFile);
 }
 
@@ -30,19 +33,80 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     return video;
   }
 
+  @override
+  Future<VideoMetadata> getMetadata(XFile videoFile) async {
+    try {
+      if (kIsWeb) {
+        // Web: Limited metadata access
+        final lastModified = await videoFile.lastModified();
+        return VideoMetadata(
+          creationDate: lastModified,
+          make: 'Web',
+          model: 'Browser',
+        );
+      } else {
+        // Native: Use flutter_media_metadata
+        // Note: The package focuses on ID3 tags. Creation Date might not be accurate.
+        // We use file lastModified as a reliable fallback.
+        final lastModified = await videoFile.lastModified();
+        
+        // We can still try to get other info if needed, but for now stick to file date
+        // final metadata = await MetadataRetriever.fromFile(File(videoFile.path));
+
+        return VideoMetadata(
+          creationDate: lastModified,
+          make: null, 
+          model: null,
+        );
+      }
+    } catch (e) {
+      debugPrint('Metadata reading error: $e');
+      return const VideoMetadata();
+    }
+  }
+
 
 
   @override
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName) async {
+  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName, VideoMetadata? metadata) async {
     final String fileName = FilenameHelper.generateFilename(
       originalName: originalName,
       positionMs: positionMs,
       extension: format.extension,
     );
 
+    XFile? extractedFile;
     if (kIsWeb) {
-      return await _extractFrameWeb(videoPath, positionMs, quality, format, fileName);
+      extractedFile = await _extractFrameWeb(videoPath, positionMs, quality, format, fileName);
     } else if (uio.Platform.isAndroid || uio.Platform.isIOS) {
+       // ... existing mobile logic ...
+       extractedFile = await _extractFrameMobile(videoPath, positionMs, quality, format, fileName);
+    } else if (uio.Platform.isMacOS) {
+       // ... existing macOS logic ...
+       extractedFile = await _extractFrameMacOS(videoPath, positionMs, quality, format, fileName);
+    }
+    
+    // Inject Metadata (Native Only)
+    if (extractedFile != null && metadata != null && !kIsWeb) {
+      try {
+        final exif = await Exif.fromPath(extractedFile.path);
+        await exif.writeAttributes({
+          if (metadata.creationDate != null) 'DateTimeOriginal': metadata.creationDate!.toIso8601String(),
+          if (metadata.make != null) 'Make': metadata.make!,
+          if (metadata.model != null) 'Model': metadata.model!,
+          // GPS is harder with native_exif basic writeAttributes (needs specific format), skipping complex GPS for now as per plan "Basic"
+        });
+        await exif.close();
+      } catch (e) {
+        debugPrint('Error writing metadata: $e');
+      }
+    }
+
+    return extractedFile;
+  }
+  
+  // Helper methods to keep code clean (Need to refactor existing logic into these helpers)
+  Future<XFile?> _extractFrameMobile(String videoPath, double positionMs, int quality, ImageFormat format, String fileName) async {
       vt.ImageFormat vtFormat;
       switch (format) {
         case ImageFormat.jpeg:
@@ -73,7 +137,10 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
           return XFile(thumbPath, name: fileName);
         }
       }
-    } else if (uio.Platform.isMacOS) {
+      return null;
+  }
+
+  Future<XFile?> _extractFrameMacOS(String videoPath, double positionMs, int quality, ImageFormat format, String fileName) async {
        try {
          final Uint8List? byteData = await _channel.invokeMethod('extractFrame', {
            'path': videoPath,
@@ -91,8 +158,7 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
        } catch (e) {
          debugPrint('MacOS extraction error: $e');
        }
-    }
-    return null;
+       return null;
   }
 
   Future<XFile?> _extractFrameWeb(String videoUrl, double positionMs, int quality, ImageFormat format, String fileName) async {

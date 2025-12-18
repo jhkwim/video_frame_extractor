@@ -5,6 +5,7 @@ import '../repositories/video_repository.dart';
 import 'pick_video_usecase.dart'; // for UseCase interface
 
 import '../entities/video_media.dart';
+import '../entities/video_metadata.dart';
 
 class ExtractFrameParams {
   final XFile videoFile;
@@ -12,6 +13,7 @@ class ExtractFrameParams {
   final int quality;
   final ImageFormat format;
   final String originalName;
+  final VideoMetadata? metadata;
 
   ExtractFrameParams({
     required this.videoFile,
@@ -19,6 +21,7 @@ class ExtractFrameParams {
     this.quality = 100,
     this.format = ImageFormat.jpeg,
     this.originalName = 'video',
+    this.metadata,
   });
 }
 
@@ -35,6 +38,7 @@ class ExtractFrameUseCase implements UseCase<XFile, ExtractFrameParams> {
       quality: params.quality,
       format: params.format,
       originalName: params.originalName,
+      metadata: params.metadata,
     );
   }
 }

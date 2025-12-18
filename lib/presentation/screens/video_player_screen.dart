@@ -23,7 +23,6 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   String? _errorMessage;
-  bool _isInitializing = true;
 
   @override
   void initState() {
@@ -42,6 +41,9 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       await _videoPlayerController.initialize();
       
       if (!mounted) return;
+      
+      // Load Metadata
+      ref.read(playerNotifierProvider.notifier).loadMetadata(widget.videoMedia.file);
   
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
@@ -58,15 +60,14 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
         if (mounted) setState(() {});
       });
       
-      setState(() {
-        _isInitializing = false;
+      _videoPlayerController.addListener(() {
+        if (mounted) setState(() {});
       });
     } catch (e) {
       debugPrint('Video initialization error: $e');
       if (mounted) {
         setState(() {
           _errorMessage = '동영상을 로드할 수 없습니다.\n($e)';
-          _isInitializing = false;
         });
       }
     }

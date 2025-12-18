@@ -5,6 +5,7 @@ import '../../domain/usecases/extract_frame_usecase.dart';
 import 'dependency_injection.dart';
 
 import '../../domain/entities/video_media.dart';
+import '../../domain/entities/video_metadata.dart';
 
 class PlayerState {
   final bool isExtracting;
@@ -12,6 +13,7 @@ class PlayerState {
   final Failure? error;
   final ImageFormat imageFormat;
   final int quality;
+  final VideoMetadata? metadata;
 
   PlayerState({
     this.isExtracting = false, 
@@ -19,6 +21,7 @@ class PlayerState {
     this.error,
     this.imageFormat = ImageFormat.jpeg,
     this.quality = 100,
+    this.metadata,
   });
 
   PlayerState copyWith({
@@ -27,6 +30,7 @@ class PlayerState {
     Failure? error,
     ImageFormat? imageFormat,
     int? quality,
+    VideoMetadata? metadata,
   }) {
     return PlayerState(
       isExtracting: isExtracting ?? this.isExtracting,
@@ -34,6 +38,7 @@ class PlayerState {
       error: error ?? this.error,
       imageFormat: imageFormat ?? this.imageFormat,
       quality: quality ?? this.quality,
+      metadata: metadata ?? this.metadata,
     );
   }
 }
@@ -52,6 +57,14 @@ class PlayerViewModel extends Notifier<PlayerState> {
     state = state.copyWith(quality: quality);
   }
 
+  Future<void> loadMetadata(XFile videoFile) async {
+    final result = await ref.read(videoRepositoryProvider).getMetadata(videoFile);
+    result.fold(
+      (failure) => null, // Ignore error, simple metadata missing is fine
+      (metadata) => state = state.copyWith(metadata: metadata),
+    );
+  }
+
   Future<void> extractFrame(XFile videoFile, double positionMs) async {
     state = state.copyWith(isExtracting: true, error: null);
     
@@ -65,6 +78,7 @@ class PlayerViewModel extends Notifier<PlayerState> {
         quality: state.quality,
         format: state.imageFormat,
         originalName: videoFile.name,
+        metadata: state.metadata,
       )
     );
 
