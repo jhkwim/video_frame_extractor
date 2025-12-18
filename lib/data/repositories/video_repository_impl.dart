@@ -29,9 +29,11 @@ class VideoRepositoryImpl implements VideoRepository {
     required XFile videoFile,
     required double positionMs,
     required int quality,
+    required ImageFormat format,
+    required String originalName,
   }) async {
     try {
-      final file = await dataSource.extractFrame(videoFile.path, positionMs, quality);
+      final file = await dataSource.extractFrame(videoFile.path, positionMs, quality, format, originalName);
       if (file != null) {
         return Right(file);
       } else {

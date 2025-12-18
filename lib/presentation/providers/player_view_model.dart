@@ -4,18 +4,36 @@ import '../../core/errors/failure.dart';
 import '../../domain/usecases/extract_frame_usecase.dart';
 import 'dependency_injection.dart';
 
+import '../../domain/entities/video_media.dart';
+
 class PlayerState {
   final bool isExtracting;
   final XFile? extractedImage;
   final Failure? error;
+  final ImageFormat imageFormat;
+  final int quality;
 
-  PlayerState({this.isExtracting = false, this.extractedImage, this.error});
+  PlayerState({
+    this.isExtracting = false, 
+    this.extractedImage, 
+    this.error,
+    this.imageFormat = ImageFormat.jpeg,
+    this.quality = 100,
+  });
 
-  PlayerState copyWith({bool? isExtracting, XFile? extractedImage, Failure? error}) {
+  PlayerState copyWith({
+    bool? isExtracting, 
+    XFile? extractedImage, 
+    Failure? error,
+    ImageFormat? imageFormat,
+    int? quality,
+  }) {
     return PlayerState(
       isExtracting: isExtracting ?? this.isExtracting,
       extractedImage: extractedImage ?? this.extractedImage,
       error: error ?? this.error,
+      imageFormat: imageFormat ?? this.imageFormat,
+      quality: quality ?? this.quality,
     );
   }
 }
@@ -26,6 +44,14 @@ class PlayerViewModel extends Notifier<PlayerState> {
     return PlayerState();
   }
 
+  void updateFormat(ImageFormat format) {
+    state = state.copyWith(imageFormat: format);
+  }
+
+  void updateQuality(int quality) {
+    state = state.copyWith(quality: quality);
+  }
+
   Future<void> extractFrame(XFile videoFile, double positionMs) async {
     state = state.copyWith(isExtracting: true, error: null);
     
@@ -33,7 +59,13 @@ class PlayerViewModel extends Notifier<PlayerState> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     final result = await ref.read(extractFrameUseCaseProvider).call(
-      ExtractFrameParams(videoFile: videoFile, positionMs: positionMs)
+      ExtractFrameParams(
+        videoFile: videoFile, 
+        positionMs: positionMs,
+        quality: state.quality,
+        format: state.imageFormat,
+        originalName: videoFile.name,
+      )
     );
 
     result.fold(

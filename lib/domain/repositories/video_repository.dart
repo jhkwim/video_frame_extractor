@@ -9,6 +9,8 @@ abstract class VideoRepository {
     required XFile videoFile,
     required double positionMs,
     required int quality,
+    required ImageFormat format,
+    required String originalName,
   });
   Future<Either<Failure, bool>> saveImageToGallery(XFile imageFile);
 }

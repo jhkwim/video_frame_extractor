@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:video_thumbnail/video_thumbnail.dart' as vt;
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_io/io.dart' as uio;
@@ -9,10 +9,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:file_selector/file_selector.dart';
+import '../../domain/entities/video_media.dart';
+import '../../core/utils/filename_helper.dart';
 
 abstract class VideoLocalDataSource {
   Future<XFile?> pickVideoFromGallery();
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality);
+  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName);
   Future<bool?> saveImage(XFile imageFile);
 }
 
@@ -28,61 +30,63 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     return video;
   }
 
+
+
   @override
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality) async {
+  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName) async {
+    final String fileName = FilenameHelper.generateFilename(
+      originalName: originalName,
+      positionMs: positionMs,
+      extension: format.extension,
+    );
+
     if (kIsWeb) {
-      return await _extractFrameWeb(videoPath, positionMs, quality);
+      return await _extractFrameWeb(videoPath, positionMs, quality, format, fileName);
     } else if (uio.Platform.isAndroid || uio.Platform.isIOS) {
-      final fileName = await VideoThumbnail.thumbnailFile(
+      vt.ImageFormat vtFormat;
+      switch (format) {
+        case ImageFormat.jpeg:
+          vtFormat = vt.ImageFormat.JPEG;
+          break;
+        case ImageFormat.png:
+          vtFormat = vt.ImageFormat.PNG;
+          break;
+        case ImageFormat.webp:
+          vtFormat = vt.ImageFormat.WEBP;
+          break;
+      }
+
+      final thumbPath = await vt.VideoThumbnail.thumbnailFile(
         video: videoPath,
         thumbnailPath: (await getTemporaryDirectory()).path,
-        imageFormat: ImageFormat.PNG,
+        imageFormat: vtFormat,
         timeMs: positionMs.toInt(),
         quality: quality,
       );
       
-      if (fileName != null) {
-        final originalFile = File(videoPath);
-        final String originalName = originalFile.uri.pathSegments.last;
-        
-        String nameWithoutExt = originalName.lastIndexOf('.') != -1 
-            ? originalName.substring(0, originalName.lastIndexOf('.')) 
-            : originalName;
-            
-        if (nameWithoutExt.startsWith('image_picker_')) {
-          nameWithoutExt = nameWithoutExt.replaceFirst('image_picker_', '');
-          final hexPattern = RegExp(r'^[0-9A-F-]+');
-          nameWithoutExt = nameWithoutExt.replaceFirst(hexPattern, '');
-        }
-
-        if (nameWithoutExt.isEmpty) {
-          nameWithoutExt = 'Video';
-        }
-        
-        final String newName = '${nameWithoutExt}_${positionMs.toInt()}ms.png';
-        final String newPath = '${File(fileName).parent.path}/$newName';
-        
+      if (thumbPath != null) {
+        final newPath = '${File(thumbPath).parent.path}/$fileName';
         try {
-          final renamedFile = await File(fileName).rename(newPath);
-          return XFile(renamedFile.path);
+          final renamedFile = await File(thumbPath).rename(newPath);
+          return XFile(renamedFile.path, name: fileName);
         } catch (e) {
-          // Fallback if rename fails
-          return XFile(fileName);
+          return XFile(thumbPath, name: fileName);
         }
       }
     } else if (uio.Platform.isMacOS) {
        try {
          final Uint8List? byteData = await _channel.invokeMethod('extractFrame', {
            'path': videoPath,
-           'position': positionMs, // double in ms
+           'position': positionMs,
+           'quality': quality,
+           'format': format.extension, 
          });
          
          if (byteData != null) {
            final tempDir = await getTemporaryDirectory();
-           final fileName = 'frame_${DateTime.now().millisecondsSinceEpoch}.png';
            final file = File('${tempDir.path}/$fileName');
            await file.writeAsBytes(byteData);
-           return XFile(file.path);
+           return XFile(file.path, name: fileName);
          }
        } catch (e) {
          debugPrint('MacOS extraction error: $e');
@@ -91,7 +95,7 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     return null;
   }
 
-  Future<XFile?> _extractFrameWeb(String videoUrl, double positionMs, int quality) async {
+  Future<XFile?> _extractFrameWeb(String videoUrl, double positionMs, int quality, ImageFormat format, String fileName) async {
     final completer = Completer<XFile?>();
     final video = html.VideoElement();
     
@@ -111,12 +115,11 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         final ctx = canvas.context2D;
         ctx.drawImage(video, 0, 0);
         
-        final blob = await canvas.toBlob('image/png');
-        // Analyze warning said 'blob' can't be null? 
-        // Checks on universal_html might show Future<Blob> -> Blob (non-nullable).
-        // If so, remove check.
+        final String mimeType = 'image/${format.extension == 'jpg' ? 'jpeg' : format.extension}';
+        final blob = await canvas.toBlob(mimeType, quality / 100.0);
+        
         final url = html.Url.createObjectUrlFromBlob(blob);
-        completer.complete(XFile(url, name: 'frame.png')); 
+        completer.complete(XFile(url, name: fileName, mimeType: mimeType)); 
         
       } catch (e) {
         debugPrint('Web extraction error: $e');
@@ -136,7 +139,7 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     if (kIsWeb) {
       try {
         final anchor = html.AnchorElement(href: imageFile.path);
-        anchor.download = 'extracted_frame_${DateTime.now().millisecondsSinceEpoch}.png';
+        anchor.download = imageFile.name.isNotEmpty ? imageFile.name : 'extracted_frame_${DateTime.now().millisecondsSinceEpoch}.png';
         anchor.click();
         return true;
       } catch (e) {
@@ -145,8 +148,8 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     } else if (uio.Platform.isMacOS) {
       try {
         final FileSaveLocation? result = await getSaveLocation(
-          suggestedName: 'extracted_frame.png',
-          acceptedTypeGroups: [const XTypeGroup(label: 'Images', extensions: ['png', 'jpg'])],
+          suggestedName: imageFile.name.isNotEmpty ? imageFile.name : 'extracted_frame.png',
+          acceptedTypeGroups: [const XTypeGroup(label: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'])],
         );
 
         if (result != null) {

@@ -37,6 +37,9 @@ class AppDelegate: FlutterAppDelegate {
       return
     }
 
+    let quality = args["quality"] as? Int ?? 100
+    let format = args["format"] as? String ?? "png"
+
     let asset = AVURLAsset(url: URL(fileURLWithPath: path))
     let generator = AVAssetImageGenerator(asset: asset)
     generator.appliesPreferredTrackTransform = true
@@ -45,16 +48,21 @@ class AppDelegate: FlutterAppDelegate {
 
     let time = CMTime(seconds: positionMs / 1000.0, preferredTimescale: 600)
 
-    // Run on background thread
     DispatchQueue.global(qos: .userInitiated).async {
       do {
         let imageRef = try generator.copyCGImage(at: time, actualTime: nil)
-        let image = NSImage(cgImage: imageRef, size: NSSize(width: imageRef.width, height: imageRef.height))
+        let bitmap = NSBitmapImageRep(cgImage: imageRef)
         
-        if let tiffData = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: tiffData),
-           let pngData = bitmap.representation(using: .png, properties: [:]) {
-            result(FlutterStandardTypedData(bytes: pngData))
+        var fileType: NSBitmapImageRep.FileType = .png
+        var properties: [NSBitmapImageRep.PropertyKey: Any] = [:]
+
+        if format.lowercased() == "jpeg" || format.lowercased() == "jpg" {
+             fileType = .jpeg
+             properties[.compressionFactor] = Float(quality) / 100.0
+        }
+
+        if let data = bitmap.representation(using: fileType, properties: properties) {
+            result(FlutterStandardTypedData(bytes: data))
         } else {
             result(FlutterError(code: "ENCODING_ERROR", message: "Failed to encode image", details: nil))
         }

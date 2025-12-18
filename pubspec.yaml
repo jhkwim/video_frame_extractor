@@ -55,6 +55,7 @@ dependencies:
   universal_io: ^2.3.1
   cross_file: ^0.3.5+1
   gal: ^2.3.2
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,7 @@ dev_dependencies:
   freezed: ^3.2.3
   json_serializable: ^6.11.2
   flutter_launcher_icons: ^0.14.4
+  mocktail: ^1.0.4
 
 flutter_launcher_icons:
   android: "launcher_icon"

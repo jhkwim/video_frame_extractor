@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_constants.dart';
 import '../providers/home_view_model.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 
 class HomeScreen extends ConsumerWidget {
@@ -30,47 +31,72 @@ class HomeScreen extends ConsumerWidget {
       }
     });
 
+
+
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.video_library_rounded,
-              size: 80,
-              color: Colors.grey,
-            ).animate().fade(duration: 500.ms).scale(),
-            const Gap(20),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ).animate().fadeIn(delay: 200.ms).moveY(begin: 10, end: 0),
-            const Gap(10),
-            Text(
-              '동영상에서 최고의 순간을 추출하세요',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey,
-              ),
-            ).animate().fadeIn(delay: 400.ms),
-            const Gap(50),
-            if (homeState.isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.read(homeViewModelProvider.notifier).pickVideo();
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.video_library_rounded,
+                  size: 80,
+                  color: Colors.grey,
+                ).animate().fade(duration: 500.ms).scale(),
+                const Gap(20),
+                Text(
+                  AppConstants.appName,
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ).animate().fadeIn(delay: 200.ms).moveY(begin: 10, end: 0),
+                const Gap(10),
+                Text(
+                  '동영상에서 최고의 순간을 추출하세요',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ).animate().fadeIn(delay: 400.ms),
+                const Gap(50),
+                if (homeState.isLoading)
+                  const CircularProgressIndicator()
+                else
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      ref.read(homeViewModelProvider.notifier).pickVideo();
+                    },
+                    icon: const Icon(Icons.add_a_photo),
+                    label: const Text(AppConstants.pickVideoButtonLabel),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      textStyle: const TextStyle(fontSize: 18),
+                    ),
+                  ).animate().scale(delay: 600.ms, curve: Curves.elasticOut),
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: 24,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Text(
+                      'v${snapshot.data!.version} (${snapshot.data!.buildNumber})',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    );
+                  }
+                  return const SizedBox.shrink();
                 },
-                icon: const Icon(Icons.add_a_photo),
-                label: const Text(AppConstants.pickVideoButtonLabel),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18),
-                ),
-              ).animate().scale(delay: 600.ms, curve: Curves.elasticOut),
-          ],
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

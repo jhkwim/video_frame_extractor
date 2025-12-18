@@ -11,3 +11,11 @@ class VideoMedia {
     this.name,
   });
 }
+
+enum ImageFormat {
+  jpeg,
+  png,
+  webp;
+
+  String get extension => name;
+}

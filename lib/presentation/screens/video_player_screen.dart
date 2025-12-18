@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:universal_io/io.dart' as uio;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +83,17 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     final millis = (duration.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
     return '$minutes:$seconds:$millis';
+  }
+
+  List<ImageFormat> _getAvailableFormats() {
+    if (kIsWeb) {
+      return [ImageFormat.jpeg, ImageFormat.png, ImageFormat.webp];
+    } else if (uio.Platform.isMacOS) {
+      return [ImageFormat.jpeg, ImageFormat.png];
+    } else {
+      // Mobile
+      return [ImageFormat.jpeg, ImageFormat.png, ImageFormat.webp];
+    }
   }
 
   @override
@@ -213,6 +225,74 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                         tooltip: '+1초',
                       ),
                     ],
+                  ),
+                  const Gap(16),
+                  
+                  // Settings Row (Format & Quality)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                         // Format Dropdown
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<ImageFormat>(
+                            value: playerState.imageFormat,
+                            dropdownColor: const Color(0xFF1E1E1E),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                            items: _getAvailableFormats().map((format) {
+                              return DropdownMenuItem(
+                                value: format,
+                                child: Text(format.name.toUpperCase()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                ref.read(playerNotifierProvider.notifier).updateFormat(value);
+                              }
+                            },
+                          ),
+                        ),
+                        const Gap(16),
+                        
+                        // Quality Slider
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Quality', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                  Text('${playerState.quality}%', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 2,
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                ),
+                                child: Slider(
+                                  value: playerState.quality.toDouble(),
+                                  min: 0,
+                                  max: 100,
+                                  activeColor: Colors.white,
+                                  inactiveColor: Colors.white24,
+                                  onChanged: (value) {
+                                    ref.read(playerNotifierProvider.notifier).updateQuality(value.toInt());
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const Gap(24),
                   
