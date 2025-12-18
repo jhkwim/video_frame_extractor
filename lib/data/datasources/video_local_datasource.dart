@@ -37,9 +37,28 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     if (fileName != null) {
       final originalFile = File(videoPath);
       final String originalName = originalFile.uri.pathSegments.last;
-      final String nameWithoutExt = originalName.lastIndexOf('.') != -1 
+      
+      String nameWithoutExt = originalName.lastIndexOf('.') != -1 
           ? originalName.substring(0, originalName.lastIndexOf('.')) 
           : originalName;
+          
+      // Clean garbage from image_picker
+      // Example: image_picker_UUID...IMG_1605
+      // Strategy: Remove 'image_picker_' and leading Hex/Dash chars
+      if (nameWithoutExt.startsWith('image_picker_')) {
+        nameWithoutExt = nameWithoutExt.replaceFirst('image_picker_', '');
+        // Remove UUID-like prefix (Hex + dashes)
+        // We match until we hit something that looks like a real name start (like 'IMG', 'VID', or just non-hex)
+        // However, 'A-F' are also valid in 'IMG' (no 'I' 'M' 'G' are not hex except 'A'-'F').
+        // 'I', 'M', 'G', 'S', 'V' are definitely NOT hex.
+        // So we remove leading [0-9A-F-]+
+        final hexPattern = RegExp(r'^[0-9A-F-]+');
+        nameWithoutExt = nameWithoutExt.replaceFirst(hexPattern, '');
+      }
+
+      if (nameWithoutExt.isEmpty) {
+        nameWithoutExt = 'Video';
+      }
       
       final String newName = '${nameWithoutExt}_${positionMs.toInt()}ms.png';
       final String newPath = '${File(fileName).parent.path}/$newName';
