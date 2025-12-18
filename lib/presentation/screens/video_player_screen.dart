@@ -30,6 +30,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     _videoPlayerController = VideoPlayerController.file(widget.videoMedia.file);
     await _videoPlayerController.initialize();
     
+    if (!mounted) return;
+
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController,
       autoPlay: true,

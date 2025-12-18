@@ -66,6 +66,7 @@ class PreviewScreen extends ConsumerWidget {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
+                  // ignore: deprecated_member_use
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
@@ -77,6 +78,7 @@ class PreviewScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
+                      // ignore: deprecated_member_use
                       Share.shareXFiles([XFile(imageFile.path)], text: 'Extracted Frame');
                     },
                     icon: const Icon(Icons.share),
