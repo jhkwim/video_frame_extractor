@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/failure.dart';
 import 'dependency_injection.dart';
@@ -25,7 +25,7 @@ class PreviewViewModel extends Notifier<PreviewState> {
     return PreviewState();
   }
 
-  Future<void> saveImage(File imageFile) async {
+  Future<void> saveImage(XFile imageFile) async {
     state = state.copyWith(isSaving: true, error: null);
     
     final result = await ref.read(saveImageUseCaseProvider).call(imageFile);

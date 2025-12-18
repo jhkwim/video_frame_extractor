@@ -3,7 +3,7 @@ import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/video_player_screen.dart';
 import '../../presentation/screens/preview_screen.dart';
 import '../../domain/entities/video_media.dart';
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -22,7 +22,7 @@ final router = GoRouter(
     GoRoute(
       path: '/preview',
       builder: (context, state) {
-        final imageFile = state.extra as File;
+        final imageFile = state.extra as XFile;
         return PreviewScreen(imageFile: imageFile);
       },
     ),

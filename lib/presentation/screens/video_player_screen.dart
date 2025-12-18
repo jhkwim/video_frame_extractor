@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -27,7 +29,12 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.file(widget.videoMedia.file);
+    if (kIsWeb) {
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoMedia.file.path));
+    } else {
+      _videoPlayerController = VideoPlayerController.file(File(widget.videoMedia.file.path));
+    }
+    
     await _videoPlayerController.initialize();
     
     if (!mounted) return;

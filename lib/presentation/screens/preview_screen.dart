@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -9,7 +10,7 @@ import '../providers/preview_view_model.dart';
 import '../providers/player_view_model.dart';
 
 class PreviewScreen extends ConsumerWidget {
-  final File imageFile;
+  final XFile imageFile;
   const PreviewScreen({super.key, required this.imageFile});
 
   @override
@@ -18,8 +19,12 @@ class PreviewScreen extends ConsumerWidget {
 
     ref.listen(previewViewModelProvider, (previous, next) {
       if (next.isSaved) {
+        String message = kIsWeb 
+            ? '이미지가 다운로드 되었습니다.' 
+            : (Platform.isMacOS ? '이미지가 저장되었습니다.' : '갤러리에 저장되었습니다.');
+            
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('갤러리에 저장되었습니다.')),
+          SnackBar(content: Text(message)),
         );
       }
       if (next.error != null) {
@@ -51,11 +56,17 @@ class PreviewScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(
-                  imageFile,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                ),
+                child: kIsWeb
+                    ? Image.network(
+                        imageFile.path,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                      )
+                    : Image.file(
+                        File(imageFile.path),
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                      ),
               ),
             ),
           ),

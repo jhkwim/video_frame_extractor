@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/failure.dart';
 import '../../domain/usecases/extract_frame_usecase.dart';
@@ -6,12 +6,12 @@ import 'dependency_injection.dart';
 
 class PlayerState {
   final bool isExtracting;
-  final File? extractedImage;
+  final XFile? extractedImage;
   final Failure? error;
 
   PlayerState({this.isExtracting = false, this.extractedImage, this.error});
 
-  PlayerState copyWith({bool? isExtracting, File? extractedImage, Failure? error}) {
+  PlayerState copyWith({bool? isExtracting, XFile? extractedImage, Failure? error}) {
     return PlayerState(
       isExtracting: isExtracting ?? this.isExtracting,
       extractedImage: extractedImage ?? this.extractedImage,
@@ -26,7 +26,7 @@ class PlayerViewModel extends Notifier<PlayerState> {
     return PlayerState();
   }
 
-  Future<void> extractFrame(File videoFile, double positionMs) async {
+  Future<void> extractFrame(XFile videoFile, double positionMs) async {
     state = state.copyWith(isExtracting: true, error: null);
     
     // Slight delay to ensure UI updates

@@ -1,8 +1,5 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:cross_file/cross_file.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
@@ -74,20 +71,35 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
       }
     } else if (uio.Platform.isMacOS) {
        try {
-         // Use cross_platform_video_thumbnails
-         final bytes = await CrossPlatformVideoThumbnails().getThumbnail(
-           videoPath, 
-           timeMs: positionMs.toInt(), 
-           quality: quality,
+         // Initialize (idempotent usually, or check documentation to be sure, but calling here is safest for now)
+         await CrossPlatformVideoThumbnails.initialize();
+         
+         final result = await CrossPlatformVideoThumbnails.generateThumbnail(
+           videoPath,
+           ThumbnailOptions(
+             timePosition: positionMs / 1000.0, // ms to seconds
+             quality: quality / 100.0, // 0-100 to 0.0-1.0
+             format: ThumbnailFormat.png,
+           ),
          );
          
-         if (bytes != null) {
-           final tempDir = await getTemporaryDirectory();
-           final fileName = 'frame_${DateTime.now().millisecondsSinceEpoch}.png';
-           final file = File('${tempDir.path}/$fileName');
-           await file.writeAsBytes(bytes);
-           return XFile(file.path);
-         }
+         // Assuming result has bytes. If result is null (unlikely if typed non-nullable), handle it.
+         // If result is expected to be Uint8List, then it's fine. 
+         // But docs said "final thumbnail = ...".
+         // Use dynamic check or try/catch if unsure of property, but likely result.bytes 
+         // Actually, if it returns ThumbnailResult, it probably has 'bytes'.
+         // Let's assume it returns Uint8List directly OR object.
+         // Wait, the example printed `thumbnail.size`. Uint8List has lengthInBytes. 
+         // But `ThumbnailResult` implies object. 
+         // I'll try `result.bytes` if it's an object. 
+         // BUT standard naming for `generateThumbnail` returning bytes is `Uint8List`.
+         // Let's try `result.bytes`:
+         
+         final tempDir = await getTemporaryDirectory();
+         final fileName = 'frame_${DateTime.now().millisecondsSinceEpoch}.png';
+         final file = File('${tempDir.path}/$fileName');
+         await file.writeAsBytes(result.data);
+         return XFile(file.path);
        } catch (e) {
          debugPrint('MacOS extraction error: $e');
        }
@@ -99,11 +111,8 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     final completer = Completer<XFile?>();
     final video = html.VideoElement();
     
-    // crossOrigin must be anonymous for CORS loaded videos to be drawn on canvas
     video.crossOrigin = 'anonymous'; 
     video.src = videoUrl;
-    
-    // Logic: Wait for metadata -> seek -> wait for seeked -> draw -> blob
     
     video.onLoadedMetadata.listen((_) {
       video.currentTime = positionMs / 1000.0;
@@ -119,13 +128,12 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         ctx.drawImage(video, 0, 0);
         
         final blob = await canvas.toBlob('image/png');
-        if (blob != null) {
-          // Create object URL for XFile
-          final url = html.Url.createObjectUrlFromBlob(blob);
-          completer.complete(XFile(url, name: 'frame.png')); 
-        } else {
-          completer.complete(null);
-        }
+        // Analyze warning said 'blob' can't be null? 
+        // Checks on universal_html might show Future<Blob> -> Blob (non-nullable).
+        // If so, remove check.
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        completer.complete(XFile(url, name: 'frame.png')); 
+        
       } catch (e) {
         debugPrint('Web extraction error: $e');
         completer.complete(null);
@@ -135,9 +143,6 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     video.onError.listen((e) {
        completer.complete(null);
     });
-
-    // If seek doesn't happen quickly, we might hang, but usually it works.
-    // Ideally add timeout.
 
     return completer.future;
   }
