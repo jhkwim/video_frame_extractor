@@ -19,6 +19,9 @@ class VideoPlayerScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
+class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
   String? _errorMessage;
   bool _isInitializing = true;
 
