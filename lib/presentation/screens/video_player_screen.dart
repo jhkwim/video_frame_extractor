@@ -37,42 +37,54 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       autoPlay: true,
       looping: true,
       aspectRatio: _videoPlayerController.value.aspectRatio,
-      showControls: true,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: Theme.of(context).primaryColor,
-        handleColor: Theme.of(context).primaryColor,
-        backgroundColor: Colors.grey,
-        bufferedColor: Colors.grey[300]!,
-      ),
+      showControls: false, // Hide default controls
     );
+    
+    // Listen to updates for custom slider
+    _videoPlayerController.addListener(() {
+      if (mounted) setState(() {});
+    });
+    
     setState(() {});
   }
 
   @override
   void dispose() {
+    _videoPlayerController.removeListener(() {});
     _videoPlayerController.dispose();
     _chewieController?.dispose();
     super.dispose();
   }
 
   Future<void> _extractFrame() async {
-    final currentPosition = await _videoPlayerController.position;
-    if (currentPosition != null) {
-      await ref.read(playerNotifierProvider.notifier).extractFrame(
-            widget.videoMedia.file,
-            currentPosition.inMilliseconds.toDouble(),
-          );
-    }
+    final currentPosition = _videoPlayerController.value.position;
+    await ref.read(playerNotifierProvider.notifier).extractFrame(
+          widget.videoMedia.file,
+          currentPosition.inMilliseconds.toDouble(),
+        );
+  }
+  
+  void _seekRelative(Duration duration) {
+    final newPos = _videoPlayerController.value.position + duration;
+    _videoPlayerController.seekTo(newPos);
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    final millis = (duration.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
+    return '$minutes:$seconds:$millis';
   }
 
   @override
   Widget build(BuildContext context) {
     final playerState = ref.watch(playerNotifierProvider);
+    final position = _videoPlayerController.value.position;
+    final duration = _videoPlayerController.value.duration;
 
     ref.listen(playerNotifierProvider, (previous, next) {
        if (next.extractedImage != null && !next.isExtracting && next.error == null) {
-          // Reset extraction state to avoid re-triggering just in case, but usually unnecessary with immutable state flow
-          // Navigate to Preview
           context.push('/preview', extra: next.extractedImage);
        }
        
@@ -88,12 +100,13 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       appBar: AppBar(
         title: const Text('장면 선택'),
         backgroundColor: Colors.transparent,
-        leading: const BackButton(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 18),
       ),
       body: SafeArea(
         child: Column(
           children: [
+            // Video Area
             Expanded(
               child: Center(
                 child: _chewieController != null &&
@@ -105,24 +118,114 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                     : const CircularProgressIndicator(),
               ),
             ),
+            
+            // Custom Controls Area
             Container(
-              padding: const EdgeInsets.all(24.0),
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: const Color(0xFF1E1E1E),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    '원하는 장면에서 정지 후 버튼을 누르세요',
-                    style: TextStyle(color: Colors.grey),
+                  // Time Display
+                  Text(
+                    '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                    style: const TextStyle(
+                      color: Colors.white, 
+                      fontSize: 16, 
+                      fontWeight: FontWeight.w500,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
                   ),
-                  const Gap(16),
+                  const Gap(8),
+                  
+                  // Slider
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 4,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+                    ),
+                    child: Slider(
+                      value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
+                      min: 0,
+                      max: duration.inMilliseconds.toDouble(),
+                      activeColor: Theme.of(context).primaryColor,
+                      inactiveColor: Colors.grey[800],
+                      onChanged: (value) {
+                         _videoPlayerController.seekTo(Duration(milliseconds: value.toInt()));
+                      },
+                    ),
+                  ),
+                  
+                  // Precision Controls
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        onPressed: () => _seekRelative(const Duration(milliseconds: -1000)),
+                        icon: const Icon(Icons.replay_10, color: Colors.white),
+                        tooltip: '-1초',
+                      ),
+                      IconButton(
+                        onPressed: () => _seekRelative(const Duration(milliseconds: -33)), // approx 1 frame at 30fps
+                        icon: const Icon(Icons.arrow_back_ios, size: 20, color: Colors.white),
+                        tooltip: '이전 프레임',
+                      ),
+                      
+                      // Play/Pause
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            if (_videoPlayerController.value.isPlaying) {
+                              _videoPlayerController.pause();
+                            } else {
+                              _videoPlayerController.play();
+                            }
+                            setState(() {});
+                          },
+                          icon: Icon(
+                            _videoPlayerController.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                            color: Colors.black,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                      
+                      IconButton(
+                        onPressed: () => _seekRelative(const Duration(milliseconds: 33)),
+                        icon: const Icon(Icons.arrow_forward_ios, size: 20, color: Colors.white),
+                        tooltip: '다음 프레임',
+                      ),
+                      IconButton(
+                        onPressed: () => _seekRelative(const Duration(milliseconds: 1000)),
+                        icon: const Icon(Icons.forward_10, color: Colors.white),
+                        tooltip: '+1초',
+                      ),
+                    ],
+                  ),
+                  const Gap(24),
+                  
+                  // Extract Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: playerState.isExtracting ? null : _extractFrame,
+                      onPressed: playerState.isExtracting ? null : () {
+                        // Ensure paused for accurate extraction
+                        _videoPlayerController.pause();
+                        _extractFrame();
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: playerState.isExtracting
                           ? const CircularProgressIndicator(color: Colors.white)
