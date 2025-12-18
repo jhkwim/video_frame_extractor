@@ -22,7 +22,7 @@ jobs:
           cache: true
       - name: Update Version
         run: |
-          sed -i 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          sed -i 's/^version: .*/version: 1.0.${{ github.run_number }}+${{ github.run_number }}/' pubspec.yaml
           cat pubspec.yaml | grep "version:"
 
       - run: flutter pub get
@@ -65,7 +65,7 @@ jobs:
           cache: true
       - name: Update Version
         run: |
-          sed -i 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          sed -i 's/^version: .*/version: 1.0.${{ github.run_number }}+${{ github.run_number }}/' pubspec.yaml
           cat pubspec.yaml | grep "version:"
 
       - run: flutter pub get
@@ -95,7 +95,7 @@ jobs:
           cache: true
       - name: Update Version
         run: |
-          sed -i '' 's/^version: .*/version: 1.0.0+${{ github.run_number }}/' pubspec.yaml
+          sed -i '' 's/^version: .*/version: 1.0.${{ github.run_number }}+${{ github.run_number }}/' pubspec.yaml
           cat pubspec.yaml | grep "version:"
 
       - run: flutter pub get
