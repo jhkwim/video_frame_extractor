@@ -109,7 +109,9 @@ jobs:
       - name: Compress App
         run: |
           cd build/macos/Build/Products/Release
-          zip -r ../../../../../video_frame_extractor_macos.zip video_frame_extractor.app
+          APP_NAME=$(ls -d *.app | head -n 1)
+          echo "Found app: $APP_NAME"
+          zip -r ../../../../../video_frame_extractor_macos.zip "$APP_NAME"
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
