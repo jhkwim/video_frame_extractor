@@ -4,17 +4,17 @@ abstract class Failure {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure(String message) : super(message);
+  const ServerFailure(super.message);
 }
 
 class CacheFailure extends Failure {
-  const CacheFailure(String message) : super(message);
+  const CacheFailure(super.message);
 }
 
 class PermissionFailure extends Failure {
-  const PermissionFailure(String message) : super(message);
+  const PermissionFailure(super.message);
 }
 
 class ProcessFailure extends Failure {
-  const ProcessFailure(String message) : super(message);
+  const ProcessFailure(super.message);
 }

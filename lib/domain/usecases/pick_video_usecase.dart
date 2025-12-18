@@ -3,8 +3,8 @@ import '../../core/errors/failure.dart';
 import '../entities/video_media.dart';
 import '../repositories/video_repository.dart';
 
-abstract class UseCase<Type, Params> {
-  Future<Either<Failure, Type>> call(Params params);
+abstract class UseCase<T, Params> {
+  Future<Either<Failure, T>> call(Params params);
 }
 
 class NoParams {}
