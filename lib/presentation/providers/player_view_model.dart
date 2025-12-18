@@ -47,13 +47,4 @@ class PlayerViewModel extends Notifier<PlayerState> {
   }
 }
 
-final playerViewModelProvider = NotifierProvider<PlayerState, PlayerViewModel>(() {
-  // Error: The provider function must return the Notifier.
-  // The syntax `NotifierProvider<NotifierClassName, StateType>(NotifierClassName.new)` is correct.
-  // But here I used a closure which is also valid if it returns the instance.
-  // Let's stick to the concise syntax like HomeViewModel.
-  return PlayerViewModel();
-}) as NotifierProvider<PlayerViewModel, PlayerState>; // Casting to fix type inference if needed, but clean way is below.
-
-// Clean implementation
 final playerNotifierProvider = NotifierProvider<PlayerViewModel, PlayerState>(PlayerViewModel.new);
