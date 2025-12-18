@@ -1,7 +1,7 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
 class VideoMedia {
-  final File file;
+  final XFile file;
   final Duration? duration;
   final String? name;
 

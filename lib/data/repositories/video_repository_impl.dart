@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../core/errors/failure.dart';
 import '../../domain/entities/video_media.dart';
@@ -15,10 +16,7 @@ class VideoRepositoryImpl implements VideoRepository {
     try {
       final file = await dataSource.pickVideoFromGallery();
       if (file != null) {
-        // Note: Duration logic isn't strictly available from just File without loading it. 
-        // We will assume UI player will handle duration, or we could use another pkg here.
-        // For now, returning the file is success.
-        return Right(VideoMedia(file: file, name: file.path.split('/').last));
+        return Right(VideoMedia(file: file, name: file.name));
       } else {
         return const Left(ProcessFailure('동영상이 선택되지 않았습니다.'));
       }
@@ -28,8 +26,8 @@ class VideoRepositoryImpl implements VideoRepository {
   }
 
   @override
-  Future<Either<Failure, File>> extractFrame({
-    required File videoFile,
+  Future<Either<Failure, XFile>> extractFrame({
+    required XFile videoFile,
     required double positionMs,
     required int quality,
   }) async {
@@ -46,9 +44,9 @@ class VideoRepositoryImpl implements VideoRepository {
   }
 
   @override
-  Future<Either<Failure, bool>> saveImageToGallery(File imageFile) async {
+  Future<Either<Failure, bool>> saveImageToGallery(XFile imageFile) async {
     try {
-      final success = await dataSource.saveImage(imageFile.path);
+      final success = await dataSource.saveImage(imageFile);
       if (success == true) {
         return const Right(true);
       } else {

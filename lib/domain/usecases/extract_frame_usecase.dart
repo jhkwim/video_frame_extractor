@@ -1,11 +1,11 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../core/errors/failure.dart';
 import '../repositories/video_repository.dart';
 import 'pick_video_usecase.dart'; // for UseCase interface
 
 class ExtractFrameParams {
-  final File videoFile;
+  final XFile videoFile;
   final double positionMs;
   final int quality;
 
@@ -16,13 +16,13 @@ class ExtractFrameParams {
   });
 }
 
-class ExtractFrameUseCase implements UseCase<File, ExtractFrameParams> {
+class ExtractFrameUseCase implements UseCase<XFile, ExtractFrameParams> {
   final VideoRepository repository;
 
   ExtractFrameUseCase(this.repository);
 
   @override
-  Future<Either<Failure, File>> call(ExtractFrameParams params) {
+  Future<Either<Failure, XFile>> call(ExtractFrameParams params) {
     return repository.extractFrame(
       videoFile: params.videoFile,
       positionMs: params.positionMs,
