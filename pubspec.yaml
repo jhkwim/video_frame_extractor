@@ -1,5 +1,5 @@
 name: video_frame_extractor
-description: "A new Flutter project."
+description: "동영상에서 최고의 순간을 고화질로 추출하는 씬스틸러(Scene Stealer)입니다."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

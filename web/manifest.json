@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#ffffff",
-    "description": "A new Flutter project.",
+    "description": "동영상에서 최고의 순간을 고화질로 추출하세요.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
