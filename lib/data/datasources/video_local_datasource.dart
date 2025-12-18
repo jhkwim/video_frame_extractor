@@ -2,12 +2,12 @@ import 'dart:io';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:gallery_saver/gallery_saver.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
-import 'package:cross_platform_video_thumbnails/cross_platform_video_thumbnails.dart';
 import 'package:file_selector/file_selector.dart';
 
 abstract class VideoLocalDataSource {
@@ -18,6 +18,7 @@ abstract class VideoLocalDataSource {
 
 class VideoLocalDataSourceImpl implements VideoLocalDataSource {
   final ImagePicker _picker;
+  static const MethodChannel _channel = MethodChannel('com.example.videoFrameExtractor/macos');
 
   VideoLocalDataSourceImpl(this._picker);
 
@@ -71,35 +72,18 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
       }
     } else if (uio.Platform.isMacOS) {
        try {
-         // Initialize (idempotent usually, or check documentation to be sure, but calling here is safest for now)
-         await CrossPlatformVideoThumbnails.initialize();
+         final Uint8List? byteData = await _channel.invokeMethod('extractFrame', {
+           'path': videoPath,
+           'position': positionMs, // double in ms
+         });
          
-         final result = await CrossPlatformVideoThumbnails.generateThumbnail(
-           videoPath,
-           ThumbnailOptions(
-             timePosition: positionMs / 1000.0, // ms to seconds
-             quality: quality / 100.0, // 0-100 to 0.0-1.0
-             format: ThumbnailFormat.png,
-           ),
-         );
-         
-         // Assuming result has bytes. If result is null (unlikely if typed non-nullable), handle it.
-         // If result is expected to be Uint8List, then it's fine. 
-         // But docs said "final thumbnail = ...".
-         // Use dynamic check or try/catch if unsure of property, but likely result.bytes 
-         // Actually, if it returns ThumbnailResult, it probably has 'bytes'.
-         // Let's assume it returns Uint8List directly OR object.
-         // Wait, the example printed `thumbnail.size`. Uint8List has lengthInBytes. 
-         // But `ThumbnailResult` implies object. 
-         // I'll try `result.bytes` if it's an object. 
-         // BUT standard naming for `generateThumbnail` returning bytes is `Uint8List`.
-         // Let's try `result.bytes`:
-         
-         final tempDir = await getTemporaryDirectory();
-         final fileName = 'frame_${DateTime.now().millisecondsSinceEpoch}.png';
-         final file = File('${tempDir.path}/$fileName');
-         await file.writeAsBytes(result.data);
-         return XFile(file.path);
+         if (byteData != null) {
+           final tempDir = await getTemporaryDirectory();
+           final fileName = 'frame_${DateTime.now().millisecondsSinceEpoch}.png';
+           final file = File('${tempDir.path}/$fileName');
+           await file.writeAsBytes(byteData);
+           return XFile(file.path);
+         }
        } catch (e) {
          debugPrint('MacOS extraction error: $e');
        }
@@ -121,8 +105,8 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     video.onSeeked.listen((_) async {
       try {
         final canvas = html.CanvasElement(
-          width: video.videoWidth,
-          height: video.videoHeight,
+          width: (video as dynamic).videoWidth,
+          height: (video as dynamic).videoHeight,
         );
         final ctx = canvas.context2D;
         ctx.drawImage(video, 0, 0);
@@ -178,7 +162,13 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
       }
     } else {
       // Mobile
-      return await GallerySaver.saveImage(imageFile.path);
+      try {
+        await Gal.putImage(imageFile.path);
+        return true;
+      } catch (e) {
+        debugPrint('Mobile save error: $e');
+        return false;
+      }
     }
   }
 }
