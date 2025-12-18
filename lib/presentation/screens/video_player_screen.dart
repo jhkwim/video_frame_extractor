@@ -19,9 +19,8 @@ class VideoPlayerScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
-  late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
+  String? _errorMessage;
+  bool _isInitializing = true;
 
   @override
   void initState() {
@@ -30,30 +29,44 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    if (kIsWeb) {
-      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoMedia.file.path));
-    } else {
-      _videoPlayerController = VideoPlayerController.file(File(widget.videoMedia.file.path));
+    try {
+      if (kIsWeb) {
+        _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoMedia.file.path));
+      } else {
+        _videoPlayerController = VideoPlayerController.file(File(widget.videoMedia.file.path));
+      }
+      
+      await _videoPlayerController.initialize();
+      
+      if (!mounted) return;
+  
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController,
+        autoPlay: false, // iOS Web blocks autoplay defined here often, better to control manually
+        looping: true,
+        aspectRatio: _videoPlayerController.value.aspectRatio,
+        showControls: false, 
+      );
+      
+      // Auto-play attempt (muted for safety if needed, but we rely on custom controls)
+      // await _videoPlayerController.play(); 
+      
+      _videoPlayerController.addListener(() {
+        if (mounted) setState(() {});
+      });
+      
+      setState(() {
+        _isInitializing = false;
+      });
+    } catch (e) {
+      debugPrint('Video initialization error: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = '동영상을 로드할 수 없습니다.\n($e)';
+          _isInitializing = false;
+        });
+      }
     }
-    
-    await _videoPlayerController.initialize();
-    
-    if (!mounted) return;
-
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController,
-      autoPlay: true,
-      looping: true,
-      aspectRatio: _videoPlayerController.value.aspectRatio,
-      showControls: false, // Hide default controls
-    );
-    
-    // Listen to updates for custom slider
-    _videoPlayerController.addListener(() {
-      if (mounted) setState(() {});
-    });
-    
-    setState(() {});
   }
 
   @override
@@ -128,13 +141,19 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
             // Video Area
             Expanded(
               child: Center(
-                child: _chewieController != null &&
-                        _chewieController!.videoPlayerController.value.isInitialized
-                    ? AspectRatio(
-                        aspectRatio: _videoPlayerController.value.aspectRatio,
-                        child: Chewie(controller: _chewieController!),
+                child: _errorMessage != null
+                    ? Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
                       )
-                    : const CircularProgressIndicator(),
+                    : _chewieController != null &&
+                            _chewieController!.videoPlayerController.value.isInitialized
+                        ? AspectRatio(
+                            aspectRatio: _videoPlayerController.value.aspectRatio,
+                            child: Chewie(controller: _chewieController!),
+                          )
+                        : const CircularProgressIndicator(),
               ),
             ),
             
