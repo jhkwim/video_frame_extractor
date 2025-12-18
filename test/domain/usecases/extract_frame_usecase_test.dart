@@ -19,7 +19,7 @@ void main() {
     // Register fallback values if needed, but XFile is simple
   });
 
-  test('should propagate parameters to repository correctly', () async {
+  test('매개변수가 리포지토리로 올바르게 전달되어야 한다', () async {
     // Arrange
     final videoFile = XFile('test_video.mp4');
     final extractedFile = XFile('test_frame.jpg');

@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:video_frame_extractor/core/utils/filename_helper.dart';
 
 void main() {
-  group('FilenameHelperTests', () {
-    test('Should generate correct filename for normal file', () {
+  group('파일명 생성 도우미 테스트 (FilenameHelper)', () {
+    test('일반 파일에 대해 올바른 파일명을 생성해야 한다', () {
       final result = FilenameHelper.generateFilename(
         originalName: 'my_video.mp4',
         positionMs: 1500,
@@ -12,7 +12,7 @@ void main() {
       expect(result, 'my_video_1500.jpg');
     });
 
-    test('Should remove extension from original name', () {
+    test('원본 이름에서 확장자를 제거해야 한다', () {
       final result = FilenameHelper.generateFilename(
         originalName: 'movie.mov',
         positionMs: 0,
@@ -21,7 +21,7 @@ void main() {
       expect(result, 'movie_0.png');
     });
 
-    test('Should handle file without extension in originalName', () {
+    test('확장자가 없는 원본 이름도 처리해야 한다', () {
       final result = FilenameHelper.generateFilename(
         originalName: 'raw_video',
         positionMs: 333,
@@ -30,7 +30,7 @@ void main() {
       expect(result, 'raw_video_333.webp');
     });
 
-    test('Should strip image_picker prefix and random characters', () {
+    test('image_picker 접두사와 임의의 문자를 제거해야 한다', () {
       // Assuming pattern image_picker_HEX...
       final result = FilenameHelper.generateFilename(
         originalName: 'image_picker_8A2F1C.mp4',
@@ -42,7 +42,7 @@ void main() {
       expect(result, 'Video_500.jpg');
     });
     
-    test('Should strip image_picker prefix but keep subsequent meaningful name if exists', () {
+    test('image_picker 접두사는 제거하되 의미 있는 이름은 유지해야 한다', () {
       // If the User picks a file via picker, often it is just random UUID.
       // But if we had 'image_picker_123_MyVideo.mp4', does logic handle it?
       // Logic: replaceFirst hexPattern.
@@ -54,7 +54,7 @@ void main() {
       expect(result, '_MyVideo_1000.jpg');
     });
 
-    test('Should default to Video if name becomes empty', () {
+    test('이름이 비어있으면 Video를 기본값으로 사용해야 한다', () {
       final result = FilenameHelper.generateFilename(
         originalName: '.mp4', // edge case
         positionMs: 100,
@@ -63,7 +63,7 @@ void main() {
       expect(result, 'Video_100.png');
     });
     
-    test('Should handle path separators in originalName if passed accidentally', () {
+    test('원본 이름에 경로 구분자가 포함된 경우 처리해야 한다', () {
        final result = FilenameHelper.generateFilename(
         originalName: '/path/to/video.mp4',
         positionMs: 10,

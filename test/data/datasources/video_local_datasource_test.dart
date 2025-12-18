@@ -21,8 +21,8 @@ void main() {
     dataSource = VideoLocalDataSourceImpl(mockPicker);
   });
 
-  group('getMetadata', () {
-    test('should return VideoMetadata with correct creationDate', () async {
+  group('메타데이터 조회 (getMetadata)', () {
+    test('올바른 생성일시를 가진 VideoMetadata를 반환해야 한다', () async {
       // Arrange
       final tempDir = Directory.systemTemp.createTempSync();
       final file = File('${tempDir.path}/test_video.mp4');

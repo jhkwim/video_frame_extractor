@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:video_frame_extractor/domain/entities/video_metadata.dart';
 
 void main() {
-  group('VideoMetadata', () {
-    test('supports value equality', () {
+  group('비디오 메타데이터 (VideoMetadata)', () {
+    test('값 동등성을 지원해야 한다 (속성 비교)', () {
       final date = DateTime.now();
       final metadataqv1 = VideoMetadata(
         creationDate: date,
@@ -40,7 +40,7 @@ void main() {
       expect(metadataqv1.make, metadataqv2.make);
     });
 
-    test('toString returns correct format', () {
+    test('toString이 올바른 형식을 반환해야 한다', () {
       final metadata = VideoMetadata(
         make: 'Test',
         model: 'Model',

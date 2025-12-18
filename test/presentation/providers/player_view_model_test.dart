@@ -22,7 +22,7 @@ void main() {
     ));
   });
 
-  test('should update state when extracting frame succeeds', () async {
+  test('프레임 추출 성공 시 상태가 업데이트되어야 한다', () async {
     // Arrange
     final container = ProviderContainer(
       overrides: [
@@ -54,7 +54,7 @@ void main() {
     expect(state.error, null);
   });
 
-  test('should update state with error when extraction fails', () async {
+  test('추출 실패 시 에러 상태로 업데이트되어야 한다', () async {
       // TODO: Implement error case
   });
 }
