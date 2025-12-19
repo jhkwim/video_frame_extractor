@@ -169,7 +169,7 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     
     video.crossOrigin = 'anonymous'; 
     video.muted = true; // Required for some browsers to load headers
-    video.playsInline = true; // Required for iOS Web
+    video.setAttribute('playsinline', 'true'); // Required for iOS Web
     video.src = videoUrl;
     
     video.onLoadedMetadata.listen((_) {
