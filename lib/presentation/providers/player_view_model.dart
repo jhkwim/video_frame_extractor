@@ -88,6 +88,17 @@ class PlayerViewModel extends Notifier<PlayerState> {
     );
   }
   
+  Future<bool> saveImageToGallery(XFile imageFile) async {
+    final result = await ref.read(videoRepositoryProvider).saveImageToGallery(imageFile);
+    return result.fold(
+      (failure) {
+        state = state.copyWith(error: failure);
+        return false;
+      },
+      (success) => success,
+    );
+  }
+  
   void reset() {
     state = PlayerState();
   }

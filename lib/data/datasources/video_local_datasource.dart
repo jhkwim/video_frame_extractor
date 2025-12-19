@@ -126,6 +126,8 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         imageFormat: vtFormat,
         timeMs: positionMs.toInt(),
         quality: quality,
+        maxHeight: 0, // 0 means original resolution
+        maxWidth: 0,
       );
       
       if (thumbPath != null) {

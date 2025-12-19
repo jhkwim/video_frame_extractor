@@ -23,6 +23,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   String? _errorMessage;
+  bool _showControls = true;
+  bool _quickSave = false;
 
   @override
   void initState() {
@@ -47,18 +49,11 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
-        autoPlay: false, // iOS Web blocks autoplay defined here often, better to control manually
+        autoPlay: false,
         looping: true,
         aspectRatio: _videoPlayerController.value.aspectRatio,
         showControls: false, 
       );
-      
-      // Auto-play attempt (muted for safety if needed, but we rely on custom controls)
-      // await _videoPlayerController.play(); 
-      
-      _videoPlayerController.addListener(() {
-        if (mounted) setState(() {});
-      });
       
       _videoPlayerController.addListener(() {
         if (mounted) setState(() {});
@@ -108,9 +103,14 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     } else if (uio.Platform.isMacOS) {
       return [ImageFormat.jpeg, ImageFormat.png];
     } else {
-      // Mobile
       return [ImageFormat.jpeg, ImageFormat.png, ImageFormat.webp];
     }
+  }
+  
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+    });
   }
 
   @override
@@ -120,8 +120,20 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     final duration = _videoPlayerController.value.duration;
 
     ref.listen(playerNotifierProvider, (previous, next) {
+       // Quick Save Logic or Normal Flow
        if (next.extractedImage != null && !next.isExtracting && next.error == null) {
-          context.push('/preview', extra: next.extractedImage);
+          if (_quickSave) {
+            // Auto Save triggered by Quick Save
+             ref.read(playerNotifierProvider.notifier).saveImageToGallery(next.extractedImage!).then((success) {
+               if (success && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('이미지가 갤러리에 저장되었습니다.')),
+                  );
+               }
+             });
+          } else {
+             context.push('/preview', extra: next.extractedImage);
+          }
        }
        
        if (next.error != null) {
@@ -133,223 +145,253 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('장면 선택'),
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 18),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Video Area
-            Expanded(
-              child: Center(
-                child: _errorMessage != null
-                    ? Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      )
-                    : _chewieController != null &&
-                            _chewieController!.videoPlayerController.value.isInitialized
-                        ? AspectRatio(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Layer 1: Fullscreen Video with Zoom
+          Center(
+            child: _errorMessage != null
+                ? Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  )
+                : _chewieController != null &&
+                        _chewieController!.videoPlayerController.value.isInitialized
+                    ? GestureDetector(
+                        onTap: _toggleControls,
+                        child: InteractiveViewer(
+                          minScale: 1.0,
+                          maxScale: 5.0,
+                          child: AspectRatio(
                             aspectRatio: _videoPlayerController.value.aspectRatio,
                             child: Chewie(controller: _chewieController!),
-                          )
-                        : const CircularProgressIndicator(),
-              ),
-            ),
-            
-            // Custom Controls Area
-            Container(
-              color: const Color(0xFF1E1E1E),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Time Display
-                  Text(
-                    '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                    style: const TextStyle(
-                      color: Colors.white, 
-                      fontSize: 16, 
-                      fontWeight: FontWeight.w500,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const Gap(8),
-                  
-                  // Slider
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 4,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-                    ),
-                    child: Slider(
-                      value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
-                      min: 0,
-                      max: duration.inMilliseconds.toDouble(),
-                      activeColor: Theme.of(context).primaryColor,
-                      inactiveColor: Colors.grey[800],
-                      onChanged: (value) {
-                         _videoPlayerController.seekTo(Duration(milliseconds: value.toInt()));
-                      },
-                    ),
-                  ),
-                  
-                  // Precision Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      IconButton(
-                        onPressed: () => _seekRelative(const Duration(milliseconds: -1000)),
-                        icon: const Icon(Icons.replay_10, color: Colors.white),
-                        tooltip: '-1초',
-                      ),
-                      IconButton(
-                        onPressed: () => _seekRelative(const Duration(milliseconds: -33)), // approx 1 frame at 30fps
-                        icon: const Icon(Icons.arrow_back_ios, size: 20, color: Colors.white),
-                        tooltip: '이전 프레임',
-                      ),
-                      
-                      // Play/Pause
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            if (_videoPlayerController.value.isPlaying) {
-                              _videoPlayerController.pause();
-                            } else {
-                              _videoPlayerController.play();
-                            }
-                            setState(() {});
-                          },
-                          icon: Icon(
-                            _videoPlayerController.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                            color: Colors.black,
-                            size: 32,
                           ),
                         ),
-                      ),
-                      
-                      IconButton(
-                        onPressed: () => _seekRelative(const Duration(milliseconds: 33)),
-                        icon: const Icon(Icons.arrow_forward_ios, size: 20, color: Colors.white),
-                        tooltip: '다음 프레임',
-                      ),
-                      IconButton(
-                        onPressed: () => _seekRelative(const Duration(milliseconds: 1000)),
-                        icon: const Icon(Icons.forward_10, color: Colors.white),
-                        tooltip: '+1초',
-                      ),
+                      )
+                    : const CircularProgressIndicator(),
+          ),
+
+          // Layer 2: Top AppBar (Overlay)
+          AnimatedOpacity(
+            opacity: _showControls ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                       const BackButton(color: Colors.white),
+                       Text(
+                         widget.videoMedia.name ?? 'Video',
+                         style: const TextStyle(color: Colors.white, fontSize: 16, shadows: [
+                           Shadow(blurRadius: 4, color: Colors.black, offset: Offset(0, 1))
+                         ]),
+                       ),
                     ],
                   ),
-                  const Gap(16),
-                  
-                  // Settings Row (Format & Quality)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+
+          // Layer 3: Bottom Controls (Overlay)
+          AnimatedOpacity(
+             opacity: _showControls ? 1.0 : 0.0,
+             duration: const Duration(milliseconds: 300),
+             child: IgnorePointer(
+               ignoring: !_showControls,
+               child: Align(
+                 alignment: Alignment.bottomCenter,
+                 child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Colors.black87, Colors.transparent],
+                      ),
                     ),
-                    child: Row(
+                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                         // Format Dropdown
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<ImageFormat>(
-                            value: playerState.imageFormat,
-                            dropdownColor: const Color(0xFF1E1E1E),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                            items: _getAvailableFormats().map((format) {
-                              return DropdownMenuItem(
-                                value: format,
-                                child: Text(format.name.toUpperCase()),
-                              );
-                            }).toList(),
+                        // Time & Slider
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _formatDuration(position),
+                               style: const TextStyle(
+                                color: Colors.white, 
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(blurRadius: 2, color: Colors.black)]
+                              ),
+                            ),
+                            Text(
+                              _formatDuration(duration),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                shadows: [Shadow(blurRadius: 2, color: Colors.black)]
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Slider
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                          ),
+                          child: Slider(
+                            value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
+                            min: 0,
+                            max: duration.inMilliseconds.toDouble(),
+                            activeColor: Theme.of(context).primaryColor,
+                            inactiveColor: Colors.white24,
                             onChanged: (value) {
-                              if (value != null) {
-                                ref.read(playerNotifierProvider.notifier).updateFormat(value);
-                              }
+                               _videoPlayerController.seekTo(Duration(milliseconds: value.toInt()));
                             },
                           ),
                         ),
-                        const Gap(16),
                         
-                        // Quality Slider
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Quality', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                  Text('${playerState.quality}%', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 2,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                                ),
-                                child: Slider(
-                                  value: playerState.quality.toDouble(),
-                                  min: 0,
-                                  max: 100,
-                                  activeColor: Colors.white,
-                                  inactiveColor: Colors.white24,
-                                  onChanged: (value) {
-                                    ref.read(playerNotifierProvider.notifier).updateQuality(value.toInt());
+                        const Gap(8),
+                        
+                        // Frame Controls & Quick Save
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                             IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: -1000)), icon: const Icon(Icons.replay_10, color: Colors.white, size: 28)),
+                             IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: -33)), icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20)),
+                             const Gap(16),
+                             Container(
+                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                child: IconButton(
+                                  onPressed: () {
+                                    if (_videoPlayerController.value.isPlaying) {
+                                      _videoPlayerController.pause();
+                                    } else {
+                                      _videoPlayerController.play();
+                                    }
+                                    setState(() {});
                                   },
+                                  icon: Icon(
+                                    _videoPlayerController.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                                    color: Colors.black,
+                                    size: 32,
+                                  ),
+                                ),
+                             ),
+                             const Gap(16),
+                             IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: 33)), icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20)),
+                             IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: 1000)), icon: const Icon(Icons.forward_10, color: Colors.white, size: 28)),
+                          ],
+                        ),
+                        
+                        const Gap(20),
+                        
+                        // Options: Format, Quality, Quick Save Toggle
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                               // Format
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton<ImageFormat>(
+                                  value: playerState.imageFormat,
+                                  dropdownColor: Colors.black87,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
+                                  items: _getAvailableFormats().map((format) {
+                                    return DropdownMenuItem(
+                                      value: format,
+                                      child: Text(format.name.toUpperCase()),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) => ref.read(playerNotifierProvider.notifier).updateFormat(value!),
+                                ),
+                              ),
+                              const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
+                              // Quality
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    // Simple toggle or cycle? For now simple cycle 80 -> 100 -> 80
+                                    final newQ = playerState.quality == 100 ? 80 : 100;
+                                    ref.read(playerNotifierProvider.notifier).updateQuality(newQ);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    child: Row(
+                                      children: [
+                                        const Text('Quality: ', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                        Text(
+                                          playerState.quality == 100 ? 'Original' : '${playerState.quality}%',
+                                          style: TextStyle(
+                                            color: playerState.quality == 100 ? Colors.amber : Colors.white, 
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
+                              // Quick Save Toggle
+                              InkWell(
+                                onTap: () => setState(() => _quickSave = !_quickSave),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _quickSave ? Icons.check_box : Icons.check_box_outline_blank,
+                                      color: _quickSave ? Theme.of(context).primaryColor : Colors.white70,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text('Quick Save', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        
+                        const Gap(16),
+                        
+                        // Extract Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: playerState.isExtracting ? null : () {
+                              _videoPlayerController.pause();
+                              _extractFrame();
+                            },
+                             style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: playerState.isExtracting
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : const Text('Extract Frame', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  const Gap(24),
-                  
-                  // Extract Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: playerState.isExtracting ? null : () {
-                        // Ensure paused for accurate extraction
-                        _videoPlayerController.pause();
-                        _extractFrame();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: playerState.isExtracting
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              AppConstants.extractButtonLabel,
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                 ),
+               ),
+             ),
+          ),
+        ],
       ),
     );
   }

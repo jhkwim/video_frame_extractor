@@ -56,17 +56,21 @@ class PreviewScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: kIsWeb
-                    ? Image.network(
-                        imageFile.path,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                      )
-                    : Image.file(
-                        File(imageFile.path),
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                      ),
+                child: InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 5.0,
+                  child: kIsWeb
+                      ? Image.network(
+                          imageFile.path,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                        )
+                      : Image.file(
+                          File(imageFile.path),
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                        ),
+                ),
               ),
             ),
           ),
