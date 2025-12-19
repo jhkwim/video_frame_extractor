@@ -398,6 +398,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton(
+                            key: const Key('extract_frame_button'),
                             onPressed: playerState.isExtracting ? null : () {
                               _videoPlayerController.pause();
                               _extractFrame();

@@ -106,6 +106,7 @@ class PreviewScreen extends ConsumerWidget {
                 const Gap(16),
                 Expanded(
                   child: ElevatedButton.icon(
+                    key: const Key('save_image_button'),
                     onPressed: previewState.isSaving
                         ? null
                         : () {

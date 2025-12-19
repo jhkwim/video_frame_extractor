@@ -49,24 +49,15 @@ void main() {
     expect(find.byType(VideoPlayerScreen), findsOneWidget);
     
     // 6. Tap Extract Frame
-    // Assuming English locale in test environment
-    if (find.text('Extract').evaluate().isNotEmpty) {
-      await tester.tap(find.text('Extract'));
-    } else {
-       // Fallback for Korean if somehow locale is KO
-       await tester.tap(find.text('장면 추출'));
-    }
+    // Using Key for robustness against localization
+    await tester.tap(find.byKey(const Key('extract_frame_button')));
     await tester.pumpAndSettle();
 
     // 7. Verify Preview Screen
     expect(find.byType(PreviewScreen), findsOneWidget);
 
     // 8. Tap Save
-    if (find.text('Save').evaluate().isNotEmpty) {
-      await tester.tap(find.text('Save'));
-    } else {
-      await tester.tap(find.text('저장'));
-    }
+    await tester.tap(find.byKey(const Key('save_image_button')));
     await tester.pumpAndSettle();
 
     // 9. Verify Success SnackBar (Check for partial match or both)
