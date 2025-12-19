@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_constants.dart';
 import '../providers/home_view_model.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 
 class HomeScreen extends ConsumerWidget {
@@ -47,14 +47,14 @@ class HomeScreen extends ConsumerWidget {
                 ).animate().fade(duration: 500.ms).scale(),
                 const Gap(20),
                 Text(
-                  AppConstants.appName,
+                  AppLocalizations.of(context)!.appName,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ).animate().fadeIn(delay: 200.ms).moveY(begin: 10, end: 0),
                 const Gap(10),
                 Text(
-                  '동영상에서 최고의 순간을 추출하세요',
+                  AppLocalizations.of(context)!.homeTitle,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.grey,
                   ),
@@ -68,7 +68,7 @@ class HomeScreen extends ConsumerWidget {
                       ref.read(homeViewModelProvider.notifier).pickVideo();
                     },
                     icon: const Icon(Icons.add_a_photo),
-                    label: const Text(AppConstants.pickVideoButtonLabel),
+                    label: Text(AppLocalizations.of(context)!.pickVideoButtonLabel),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                       textStyle: const TextStyle(fontSize: 18),
@@ -87,7 +87,7 @@ class HomeScreen extends ConsumerWidget {
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     return Text(
-                      'v${snapshot.data!.version} (${snapshot.data!.buildNumber})',
+                      '${AppLocalizations.of(context)!.version} ${snapshot.data!.version} (${snapshot.data!.buildNumber})',
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     );
                   }

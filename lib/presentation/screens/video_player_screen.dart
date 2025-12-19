@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import '../../domain/entities/video_media.dart';
 import '../providers/player_view_model.dart';
-import '../../core/constants/app_constants.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class VideoPlayerScreen extends ConsumerStatefulWidget {
   final VideoMedia videoMedia;
@@ -24,6 +24,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   ChewieController? _chewieController;
   String? _errorMessage;
   bool _showControls = true;
+  bool _showSettingsPanel = false; // Collapsible options state
   bool _quickSave = false;
 
   @override
@@ -62,7 +63,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       debugPrint('Video initialization error: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = '동영상을 로드할 수 없습니다.\n($e)';
+          _errorMessage = '${AppLocalizations.of(context)!.videoLoadError}\n($e)';
         });
       }
     }
@@ -127,7 +128,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
              ref.read(playerNotifierProvider.notifier).saveImageToGallery(next.extractedImage!).then((success) {
                if (success && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('이미지가 갤러리에 저장되었습니다.')),
+                     SnackBar(content: Text(AppLocalizations.of(context)!.imageSavedToGallery)),
                   );
                }
              });
@@ -287,81 +288,107 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                              const Gap(16),
                              IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: 33)), icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20)),
                              IconButton(onPressed: () => _seekRelative(const Duration(milliseconds: 1000)), icon: const Icon(Icons.forward_10, color: Colors.white, size: 28)),
+                             const Gap(16),
+                             // Settings Toggle
+                             IconButton(
+                               onPressed: () {
+                                 setState(() {
+                                   _showSettingsPanel = !_showSettingsPanel;
+                                 });
+                               },
+                               icon: Icon(
+                                 _showSettingsPanel ? Icons.settings : Icons.settings_outlined,
+                                 color: _showSettingsPanel ? Theme.of(context).primaryColor : Colors.white,
+                               ),
+                             ),
                           ],
                         ),
                         
-                        const Gap(20),
+                        const Gap(16),
                         
-                        // Options: Format, Quality, Quick Save Toggle
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                               // Format
-                              DropdownButtonHideUnderline(
-                                child: DropdownButton<ImageFormat>(
-                                  value: playerState.imageFormat,
-                                  dropdownColor: Colors.black87,
-                                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
-                                  items: _getAvailableFormats().map((format) {
-                                    return DropdownMenuItem(
-                                      value: format,
-                                      child: Text(format.name.toUpperCase()),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) => ref.read(playerNotifierProvider.notifier).updateFormat(value!),
-                                ),
-                              ),
-                              const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
-                              // Quality
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () {
-                                    // Simple toggle or cycle? For now simple cycle 80 -> 100 -> 80
-                                    final newQ = playerState.quality == 100 ? 80 : 100;
-                                    ref.read(playerNotifierProvider.notifier).updateQuality(newQ);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Row(
-                                      children: [
-                                        const Text('Quality: ', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                        Text(
-                                          playerState.quality == 100 ? 'Original' : '${playerState.quality}%',
-                                          style: TextStyle(
-                                            color: playerState.quality == 100 ? Colors.amber : Colors.white, 
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12
+                        // Collapsible Options Panel
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: _showSettingsPanel
+                              ? Container(
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min, // Wrap content
+                                    children: [
+                                      // Format
+                                      DropdownButtonHideUnderline(
+                                        child: DropdownButton<ImageFormat>(
+                                          value: playerState.imageFormat,
+                                          dropdownColor: Colors.black87,
+                                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                                          icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
+                                          items: _getAvailableFormats().map((format) {
+                                            return DropdownMenuItem(
+                                              value: format,
+                                              child: Text(format.name.toUpperCase()),
+                                            );
+                                          }).toList(),
+                                          onChanged: (value) =>
+                                              ref.read(playerNotifierProvider.notifier).updateFormat(value!),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
+                                      // Quality
+                                      InkWell(
+                                        onTap: () {
+                                          final newQ = playerState.quality == 100 ? 80 : 100;
+                                          ref.read(playerNotifierProvider.notifier).updateQuality(newQ);
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                          child: Row(
+                                            children: [
+                                              Text('${AppLocalizations.of(context)!.quality}: ',
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                              Text(
+                                                playerState.quality == 100
+                                                    ? AppLocalizations.of(context)!.original
+                                                    : '${playerState.quality}%',
+                                                style: TextStyle(
+                                                    color: playerState.quality == 100
+                                                        ? Colors.amber
+                                                        : Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
+                                      // Quick Save Toggle
+                                      InkWell(
+                                        onTap: () => setState(() => _quickSave = !_quickSave),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              _quickSave ? Icons.check_box : Icons.check_box_outline_blank,
+                                              color: _quickSave
+                                                  ? Theme.of(context).primaryColor
+                                                  : Colors.white70,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(AppLocalizations.of(context)!.quickSave,
+                                                style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ),
-                              const SizedBox(height: 20, child: VerticalDivider(color: Colors.white24)),
-                              // Quick Save Toggle
-                              InkWell(
-                                onTap: () => setState(() => _quickSave = !_quickSave),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _quickSave ? Icons.check_box : Icons.check_box_outline_blank,
-                                      color: _quickSave ? Theme.of(context).primaryColor : Colors.white70,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text('Quick Save', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                                )
+                              : const SizedBox.shrink(),
                         ),
                         
                         const Gap(16),
@@ -382,7 +409,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                             ),
                             child: playerState.isExtracting
                                 ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Extract Frame', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                : Text(AppLocalizations.of(context)!.extractButtonLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],

@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_constants.dart';
 import '../providers/preview_view_model.dart';
 import '../providers/player_view_model.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class PreviewScreen extends ConsumerWidget {
   final XFile imageFile;
@@ -20,8 +20,8 @@ class PreviewScreen extends ConsumerWidget {
     ref.listen(previewViewModelProvider, (previous, next) {
       if (next.isSaved) {
         String message = kIsWeb 
-            ? '이미지가 다운로드 되었습니다.' 
-            : (Platform.isMacOS ? '이미지가 저장되었습니다.' : '갤러리에 저장되었습니다.');
+            ? AppLocalizations.of(context)!.imageDownloaded 
+            : (Platform.isMacOS ? AppLocalizations.of(context)!.imageSaved : AppLocalizations.of(context)!.imageSavedToGallery);
             
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
@@ -36,7 +36,7 @@ class PreviewScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('결과 확인'),
+        title: Text(AppLocalizations.of(context)!.previewTitle),
         actions: [
           IconButton(
             onPressed: () {
@@ -97,7 +97,7 @@ class PreviewScreen extends ConsumerWidget {
                       Share.shareXFiles([XFile(imageFile.path)], text: 'Extracted Frame');
                     },
                     icon: const Icon(Icons.share),
-                    label: const Text(AppConstants.shareButtonLabel),
+                    label: Text(AppLocalizations.of(context)!.shareButtonLabel),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -118,7 +118,7 @@ class PreviewScreen extends ConsumerWidget {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text(AppConstants.saveButtonLabel),
+                        : Text(AppLocalizations.of(context)!.saveButtonLabel),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: Theme.of(context).primaryColor,
