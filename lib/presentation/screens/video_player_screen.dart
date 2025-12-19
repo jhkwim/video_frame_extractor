@@ -122,7 +122,10 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
 
     ref.listen(playerNotifierProvider, (previous, next) {
        // Quick Save Logic or Normal Flow
-       if (next.extractedImage != null && !next.isExtracting && next.error == null) {
+       // Only trigger when extraction JUST completed (previous was extracting, next is not)
+       final justFinishedExtracting = (previous?.isExtracting == true) && !next.isExtracting;
+       
+       if (justFinishedExtracting && next.extractedImage != null && next.error == null) {
           if (_quickSave) {
             // Auto Save triggered by Quick Save
              ref.read(playerNotifierProvider.notifier).saveImageToGallery(next.extractedImage!).then((success) {
