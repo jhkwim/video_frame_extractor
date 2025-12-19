@@ -168,6 +168,8 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     final video = html.VideoElement();
     
     video.crossOrigin = 'anonymous'; 
+    video.muted = true; // Required for some browsers to load headers
+    video.playsInline = true; // Required for iOS Web
     video.src = videoUrl;
     
     video.onLoadedMetadata.listen((_) {
@@ -175,6 +177,9 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     });
 
     video.onSeeked.listen((_) async {
+      // Small delay to ensure frame is rendered (fixes black screen)
+      await Future.delayed(const Duration(milliseconds: 200));
+
       try {
         final canvas = html.CanvasElement(
           width: (video as dynamic).videoWidth,
@@ -187,16 +192,22 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         final blob = await canvas.toBlob(mimeType, quality / 100.0);
         
         final url = html.Url.createObjectUrlFromBlob(blob);
-        completer.complete(XFile(url, name: fileName, mimeType: mimeType)); 
+        if (!completer.isCompleted) {
+          completer.complete(XFile(url, name: fileName, mimeType: mimeType));
+        }
         
       } catch (e) {
         debugPrint('Web extraction error: $e');
-        completer.complete(null);
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
       }
     });
     
     video.onError.listen((e) {
-       completer.complete(null);
+      if (!completer.isCompleted) {
+         completer.complete(null);
+      }
     });
 
     return completer.future;
