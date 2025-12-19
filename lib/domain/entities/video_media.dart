@@ -17,5 +17,5 @@ enum ImageFormat {
   png,
   webp;
 
-  String get extension => name;
+  String get extension => this == ImageFormat.jpeg ? 'jpg' : name;
 }
