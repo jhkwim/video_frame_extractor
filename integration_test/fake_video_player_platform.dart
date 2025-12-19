@@ -61,8 +61,6 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Stream<VideoEvent> videoEventsFor(int textureId) {
-  @override
-  Stream<VideoEvent> videoEventsFor(int textureId) {
     late StreamController<VideoEvent> controller;
     controller = StreamController<VideoEvent>(
       onListen: () {
