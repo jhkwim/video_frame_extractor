@@ -65,5 +65,8 @@ void main() {
     
     // Cleanup
     if (await testFile.exists()) await testFile.delete();
+    // Ensure all animations and timers are settled before test ends
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }
