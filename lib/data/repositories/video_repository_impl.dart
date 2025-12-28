@@ -17,7 +17,7 @@ class VideoRepositoryImpl implements VideoRepository {
       final metadata = await dataSource.getMetadata(videoFile);
       return Right(metadata);
     } catch (e) {
-      return Left(ProcessFailure(e.toString()));
+      return Left(VideoPickFailure(e.toString()));
     }
   }
 
@@ -31,7 +31,7 @@ class VideoRepositoryImpl implements VideoRepository {
         return const Left(UserCanceledFailure());
       }
     } catch (e) {
-      return Left(ProcessFailure(e.toString()));
+      return Left(VideoPickFailure(e.toString()));
     }
   }
 
@@ -56,10 +56,10 @@ class VideoRepositoryImpl implements VideoRepository {
       if (file != null) {
         return Right(file);
       } else {
-        return const Left(ProcessFailure('프레임 추출 실패'));
+        return const Left(FrameExtractionFailure('Failed to extract frame'));
       }
     } catch (e) {
-      return Left(ProcessFailure(e.toString()));
+      return Left(FrameExtractionFailure(e.toString()));
     }
   }
 
@@ -70,10 +70,10 @@ class VideoRepositoryImpl implements VideoRepository {
       if (success == true) {
         return const Right(true);
       } else {
-        return const Left(ProcessFailure('저장 실패'));
+        return const Left(SaveFailure('Failed to save'));
       }
     } catch (e) {
-      return Left(ProcessFailure(e.toString()));
+      return Left(SaveFailure(e.toString()));
     }
   }
 }

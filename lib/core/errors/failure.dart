@@ -16,9 +16,17 @@ class PermissionFailure extends Failure {
 }
 
 class UserCanceledFailure extends Failure {
-  const UserCanceledFailure() : super('작업이 취소되었습니다.');
+  const UserCanceledFailure() : super('Operation canceled');
 }
 
-class ProcessFailure extends Failure {
-  const ProcessFailure(super.message);
+class VideoPickFailure extends Failure {
+  const VideoPickFailure(String originalMessage) : super(originalMessage);
+}
+
+class FrameExtractionFailure extends Failure {
+  const FrameExtractionFailure(String originalMessage) : super(originalMessage);
+}
+
+class SaveFailure extends Failure {
+  const SaveFailure(String originalMessage) : super(originalMessage);
 }
