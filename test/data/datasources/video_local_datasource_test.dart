@@ -1,9 +1,8 @@
-
 import 'dart:io';
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:video_frame_extractor/data/datasources/video_local_datasource.dart';
 import 'package:video_frame_extractor/domain/entities/video_metadata.dart';
@@ -28,9 +27,9 @@ void main() {
       final file = File('${tempDir.path}/test_video.mp4');
       file.writeAsStringSync('dummy content');
       // Set modification time explicitly?
-      // file.setLastModifiedSync(DateTime(2023, 1, 1)); 
+      // file.setLastModifiedSync(DateTime(2023, 1, 1));
       // Platform dependency, might not work perfectly in all test envs, but usually fine.
-      
+
       final xFile = XFile(file.path);
 
       // Act
@@ -42,7 +41,7 @@ void main() {
       expect(result.creationDate, isNotNull);
       // We know our implementation returns 'Web'/'Browser' for Web, but this test runs in VM (Native).
       // Logic for native: creationDate mapped from lastModified.
-      
+
       // Cleanup
       tempDir.deleteSync(recursive: true);
     });
