@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/errors/failure.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -24,9 +25,16 @@ class HomeScreen extends ConsumerWidget {
       }
 
       if (next.error != null) {
+        String message = next.error!.message;
+        if (next.error is VideoPickFailure) {
+          message = AppLocalizations.of(context)!.videoPickError;
+        } else if (next.error is UserCanceledFailure) {
+          return; // Ignore cancel
+        }
+
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(next.error!.message)));
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     });
 
