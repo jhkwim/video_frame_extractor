@@ -28,7 +28,7 @@ class VideoRepositoryImpl implements VideoRepository {
       if (file != null) {
         return Right(VideoMedia(file: file, name: file.name));
       } else {
-        return const Left(ProcessFailure('동영상이 선택되지 않았거나, 불러오는 데 실패했습니다.\n(iCloud 동영상은 다운로드 후 시도해주세요)'));
+        return const Left(UserCanceledFailure());
       }
     } catch (e) {
       return Left(ProcessFailure(e.toString()));
@@ -46,7 +46,13 @@ class VideoRepositoryImpl implements VideoRepository {
   }) async {
     try {
       final file = await dataSource.extractFrame(
-          videoFile.path, positionMs, quality, format, originalName, metadata);
+        videoFile.path,
+        positionMs,
+        quality,
+        format,
+        originalName,
+        metadata,
+      );
       if (file != null) {
         return Right(file);
       } else {

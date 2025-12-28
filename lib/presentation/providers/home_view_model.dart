@@ -14,7 +14,11 @@ class HomeState {
 
   HomeState({this.isLoading = false, this.selectedVideo, this.error});
 
-  HomeState copyWith({bool? isLoading, VideoMedia? selectedVideo, Failure? error}) {
+  HomeState copyWith({
+    bool? isLoading,
+    VideoMedia? selectedVideo,
+    Failure? error,
+  }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
       selectedVideo: selectedVideo ?? this.selectedVideo,
@@ -31,18 +35,26 @@ class HomeViewModel extends Notifier<HomeState> {
 
   Future<void> pickVideo() async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     final result = await ref.read(pickVideoUseCaseProvider).call(NoParams());
-    
+
     result.fold(
-      (failure) => state = state.copyWith(isLoading: false, error: failure),
+      (failure) {
+        if (failure is UserCanceledFailure) {
+          state = state.copyWith(isLoading: false);
+        } else {
+          state = state.copyWith(isLoading: false, error: failure);
+        }
+      },
       (video) => state = state.copyWith(isLoading: false, selectedVideo: video),
     );
   }
-  
+
   void clearVideo() {
     state = HomeState();
   }
 }
 
-final homeViewModelProvider = NotifierProvider<HomeViewModel, HomeState>(HomeViewModel.new);
+final homeViewModelProvider = NotifierProvider<HomeViewModel, HomeState>(
+  HomeViewModel.new,
+);
