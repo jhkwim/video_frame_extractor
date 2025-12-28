@@ -16,14 +16,21 @@ import '../../core/utils/filename_helper.dart';
 
 abstract class VideoLocalDataSource {
   Future<XFile?> pickVideoFromGallery();
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName, VideoMetadata? metadata);
+  Future<XFile?> extractFrame(
+    String videoPath,
+    double positionMs,
+    int quality,
+    ImageFormat format,
+    String originalName,
+    VideoMetadata? metadata,
+  );
   Future<VideoMetadata> getMetadata(XFile videoFile);
   Future<bool?> saveImage(XFile imageFile);
 }
 
 class VideoLocalDataSourceImpl implements VideoLocalDataSource {
   final ImagePicker _picker;
-  static const MethodChannel _channel = MethodChannel('com.example.videoFrameExtractor/macos');
+  static const MethodChannel _channel = MethodChannel('com.jhkwim.framy/macos');
 
   VideoLocalDataSourceImpl(this._picker);
 
@@ -49,13 +56,13 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         // Note: The package focuses on ID3 tags. Creation Date might not be accurate.
         // We use file lastModified as a reliable fallback.
         final lastModified = await videoFile.lastModified();
-        
+
         // We can still try to get other info if needed, but for now stick to file date
         // final metadata = await MetadataRetriever.fromFile(File(videoFile.path));
 
         return VideoMetadata(
           creationDate: lastModified,
-          make: null, 
+          make: null,
           model: null,
         );
       }
@@ -65,10 +72,15 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     }
   }
 
-
-
   @override
-  Future<XFile?> extractFrame(String videoPath, double positionMs, int quality, ImageFormat format, String originalName, VideoMetadata? metadata) async {
+  Future<XFile?> extractFrame(
+    String videoPath,
+    double positionMs,
+    int quality,
+    ImageFormat format,
+    String originalName,
+    VideoMetadata? metadata,
+  ) async {
     final String fileName = FilenameHelper.generateFilename(
       originalName: originalName,
       positionMs: positionMs,
@@ -77,21 +89,40 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
 
     XFile? extractedFile;
     if (kIsWeb) {
-      extractedFile = await _extractFrameWeb(videoPath, positionMs, quality, format, fileName);
+      extractedFile = await _extractFrameWeb(
+        videoPath,
+        positionMs,
+        quality,
+        format,
+        fileName,
+      );
     } else if (uio.Platform.isAndroid || uio.Platform.isIOS) {
-       // ... existing mobile logic ...
-       extractedFile = await _extractFrameMobile(videoPath, positionMs, quality, format, fileName);
+      // ... existing mobile logic ...
+      extractedFile = await _extractFrameMobile(
+        videoPath,
+        positionMs,
+        quality,
+        format,
+        fileName,
+      );
     } else if (uio.Platform.isMacOS) {
-       // ... existing macOS logic ...
-       extractedFile = await _extractFrameMacOS(videoPath, positionMs, quality, format, fileName);
+      // ... existing macOS logic ...
+      extractedFile = await _extractFrameMacOS(
+        videoPath,
+        positionMs,
+        quality,
+        format,
+        fileName,
+      );
     }
-    
+
     // Inject Metadata (Native Only)
     if (extractedFile != null && metadata != null && !kIsWeb) {
       try {
         final exif = await Exif.fromPath(extractedFile.path);
         await exif.writeAttributes({
-          if (metadata.creationDate != null) 'DateTimeOriginal': metadata.creationDate!.toIso8601String(),
+          if (metadata.creationDate != null)
+            'DateTimeOriginal': metadata.creationDate!.toIso8601String(),
           if (metadata.make != null) 'Make': metadata.make!,
           if (metadata.model != null) 'Model': metadata.model!,
           // GPS is harder with native_exif basic writeAttributes (needs specific format), skipping complex GPS for now as per plan "Basic"
@@ -104,74 +135,92 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
 
     return extractedFile;
   }
-  
+
   // Helper methods to keep code clean (Need to refactor existing logic into these helpers)
-  Future<XFile?> _extractFrameMobile(String videoPath, double positionMs, int quality, ImageFormat format, String fileName) async {
-      vt.ImageFormat vtFormat;
-      switch (format) {
-        case ImageFormat.jpeg:
-          vtFormat = vt.ImageFormat.JPEG;
-          break;
-        case ImageFormat.png:
-          vtFormat = vt.ImageFormat.PNG;
-          break;
-        case ImageFormat.webp:
-          vtFormat = vt.ImageFormat.WEBP;
-          break;
-      }
+  Future<XFile?> _extractFrameMobile(
+    String videoPath,
+    double positionMs,
+    int quality,
+    ImageFormat format,
+    String fileName,
+  ) async {
+    vt.ImageFormat vtFormat;
+    switch (format) {
+      case ImageFormat.jpeg:
+        vtFormat = vt.ImageFormat.JPEG;
+        break;
+      case ImageFormat.png:
+        vtFormat = vt.ImageFormat.PNG;
+        break;
+      case ImageFormat.webp:
+        vtFormat = vt.ImageFormat.WEBP;
+        break;
+    }
 
-      final thumbPath = await vt.VideoThumbnail.thumbnailFile(
-        video: videoPath,
-        thumbnailPath: (await getTemporaryDirectory()).path,
-        imageFormat: vtFormat,
-        timeMs: positionMs.toInt(),
-        quality: quality,
-        maxHeight: 0, // 0 means original resolution
-        maxWidth: 0,
-      );
-      
-      if (thumbPath != null) {
-        final newPath = '${File(thumbPath).parent.path}/$fileName';
-        try {
-          final renamedFile = await File(thumbPath).rename(newPath);
-          return XFile(renamedFile.path, name: fileName);
-        } catch (e) {
-          return XFile(thumbPath, name: fileName);
-        }
+    final thumbPath = await vt.VideoThumbnail.thumbnailFile(
+      video: videoPath,
+      thumbnailPath: (await getTemporaryDirectory()).path,
+      imageFormat: vtFormat,
+      timeMs: positionMs.toInt(),
+      quality: quality,
+      maxHeight: 0, // 0 means original resolution
+      maxWidth: 0,
+    );
+
+    if (thumbPath != null) {
+      final newPath = '${File(thumbPath).parent.path}/$fileName';
+      try {
+        final renamedFile = await File(thumbPath).rename(newPath);
+        return XFile(renamedFile.path, name: fileName);
+      } catch (e) {
+        return XFile(thumbPath, name: fileName);
       }
-      return null;
+    }
+    return null;
   }
 
-  Future<XFile?> _extractFrameMacOS(String videoPath, double positionMs, int quality, ImageFormat format, String fileName) async {
-       try {
-         final Uint8List? byteData = await _channel.invokeMethod('extractFrame', {
-           'path': videoPath,
-           'position': positionMs,
-           'quality': quality,
-           'format': format.extension, 
-         });
-         
-         if (byteData != null) {
-           final tempDir = await getTemporaryDirectory();
-           final file = File('${tempDir.path}/$fileName');
-           await file.writeAsBytes(byteData);
-           return XFile(file.path, name: fileName);
-         }
-       } catch (e) {
-         debugPrint('MacOS extraction error: $e');
-       }
-       return null;
+  Future<XFile?> _extractFrameMacOS(
+    String videoPath,
+    double positionMs,
+    int quality,
+    ImageFormat format,
+    String fileName,
+  ) async {
+    try {
+      final Uint8List? byteData = await _channel.invokeMethod('extractFrame', {
+        'path': videoPath,
+        'position': positionMs,
+        'quality': quality,
+        'format': format.extension,
+      });
+
+      if (byteData != null) {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsBytes(byteData);
+        return XFile(file.path, name: fileName);
+      }
+    } catch (e) {
+      debugPrint('MacOS extraction error: $e');
+    }
+    return null;
   }
 
-  Future<XFile?> _extractFrameWeb(String videoUrl, double positionMs, int quality, ImageFormat format, String fileName) async {
+  Future<XFile?> _extractFrameWeb(
+    String videoUrl,
+    double positionMs,
+    int quality,
+    ImageFormat format,
+    String fileName,
+  ) async {
     final completer = Completer<XFile?>();
     final video = html.VideoElement();
-    
-    video.crossOrigin = 'anonymous'; 
+
+    video.crossOrigin = 'anonymous';
     video.muted = true; // Required for some browsers to load headers
     video.setAttribute('playsinline', 'true'); // Required for iOS Web
     video.src = videoUrl;
-    
+
     video.onLoadedMetadata.listen((_) {
       video.currentTime = positionMs / 1000.0;
     });
@@ -187,15 +236,15 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         );
         final ctx = canvas.context2D;
         ctx.drawImage(video, 0, 0);
-        
-        final String mimeType = 'image/${format.extension == 'jpg' ? 'jpeg' : format.extension}';
+
+        final String mimeType =
+            'image/${format.extension == 'jpg' ? 'jpeg' : format.extension}';
         final blob = await canvas.toBlob(mimeType, quality / 100.0);
-        
+
         final url = html.Url.createObjectUrlFromBlob(blob);
         if (!completer.isCompleted) {
           completer.complete(XFile(url, name: fileName, mimeType: mimeType));
         }
-        
       } catch (e) {
         debugPrint('Web extraction error: $e');
         if (!completer.isCompleted) {
@@ -203,10 +252,10 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
         }
       }
     });
-    
+
     video.onError.listen((e) {
       if (!completer.isCompleted) {
-         completer.complete(null);
+        completer.complete(null);
       }
     });
 
@@ -218,7 +267,9 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     if (kIsWeb) {
       try {
         final anchor = html.AnchorElement(href: imageFile.path);
-        anchor.download = imageFile.name.isNotEmpty ? imageFile.name : 'extracted_frame_${DateTime.now().millisecondsSinceEpoch}.png';
+        anchor.download = imageFile.name.isNotEmpty
+            ? imageFile.name
+            : 'extracted_frame_${DateTime.now().millisecondsSinceEpoch}.png';
         anchor.click();
         return true;
       } catch (e) {
@@ -227,13 +278,23 @@ class VideoLocalDataSourceImpl implements VideoLocalDataSource {
     } else if (uio.Platform.isMacOS) {
       try {
         final FileSaveLocation? result = await getSaveLocation(
-          suggestedName: imageFile.name.isNotEmpty ? imageFile.name : 'extracted_frame.png',
-          acceptedTypeGroups: [const XTypeGroup(label: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'])],
+          suggestedName: imageFile.name.isNotEmpty
+              ? imageFile.name
+              : 'extracted_frame.png',
+          acceptedTypeGroups: [
+            const XTypeGroup(
+              label: 'Images',
+              extensions: ['png', 'jpg', 'jpeg', 'webp'],
+            ),
+          ],
         );
 
         if (result != null) {
           final Uint8List fileData = await imageFile.readAsBytes();
-          final XFile textFile = XFile.fromData(fileData, mimeType: 'image/png');
+          final XFile textFile = XFile.fromData(
+            fileData,
+            mimeType: 'image/png',
+          );
           await textFile.saveTo(result.path);
           return true;
         }

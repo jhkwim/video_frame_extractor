@@ -14,7 +14,7 @@ class AppDelegate: FlutterAppDelegate {
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
     let controller : FlutterViewController = mainFlutterWindow?.contentViewController as! FlutterViewController
-    let channel = FlutterMethodChannel(name: "com.example.videoFrameExtractor/macos",
+    let channel = FlutterMethodChannel(name: "com.jhkwim.framy/macos",
                                        binaryMessenger: controller.engine.binaryMessenger)
     
     channel.setMethodCallHandler({

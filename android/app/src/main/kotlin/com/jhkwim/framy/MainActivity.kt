@@ -1,4 +1,4 @@
-package com.example.video_frame_extractor
+package com.jhkwim.framy
 
 import io.flutter.embedding.android.FlutterActivity
 
