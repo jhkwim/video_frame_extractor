@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appName.
   ///
   /// In ko, this message translates to:
-  /// **'씬스틸러'**
+  /// **'프레이미'**
   String get appName;
 
   /// No description provided for @homeTitle.

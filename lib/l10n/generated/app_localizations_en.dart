@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'SceneStealer';
+  String get appName => 'Framy';
 
   @override
   String get homeTitle => 'Extract the best moments from your video';

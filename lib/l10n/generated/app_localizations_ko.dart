@@ -9,7 +9,7 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
-  String get appName => '씬스틸러';
+  String get appName => '프레이미';
 
   @override
   String get homeTitle => '동영상에서 최고의 순간을 추출하세요';
